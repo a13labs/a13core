@@ -3,6 +3,7 @@ package providers
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 type MemoryAuthProvide struct {
@@ -19,6 +20,19 @@ func NewMemoryAuthProvider(config json.RawMessage) AuthProvider {
 func (a *MemoryAuthProvide) AuthenticateUser(username, password string) bool {
 	if user, ok := a.users[username]; ok {
 		return user.Password == HashPassword(password)
+	}
+	return false
+}
+
+func (a *MemoryAuthProvide) AuthenticateWithAppPassword(username, password string) bool {
+	if user, ok := a.users[username]; ok {
+		for _, appPassword := range user.AppPasswords {
+			if appPassword.Hash == HashPassword(password) && !appPassword.Revoked {
+				if appPassword.ExpiresAt.IsZero() || time.Now().Before(appPassword.ExpiresAt) {
+					return true
+				}
+			}
+		}
 	}
 	return false
 }
@@ -92,4 +106,53 @@ func (a *MemoryAuthProvide) SetRole(username, role string) error {
 		return nil
 	}
 	return fmt.Errorf("user does not exist")
+}
+
+func (a *MemoryAuthProvide) AddAppPassword(username, password string, expire int) error {
+	if user, ok := a.users[username]; ok {
+		appPassword := AppPassword{
+			Hash: HashPassword(password),
+		}
+		if expire > 0 {
+			appPassword.ExpiresAt = time.Now().Add(time.Duration(expire) * time.Hour)
+		}
+		user.AppPasswords = append(user.AppPasswords, appPassword)
+		return nil
+	}
+	return fmt.Errorf("user does not exist")
+}
+
+func (a *MemoryAuthProvide) RevokeAppPassword(username, id string) error {
+	if user, ok := a.users[username]; ok {
+		for i, appPassword := range user.AppPasswords {
+			if appPassword.ID == id {
+				user.AppPasswords[i].Revoked = true
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("user or app password does not exist")
+}
+
+func (a *MemoryAuthProvide) ListAppPasswordsIds(username string) ([]string, error) {
+	if user, ok := a.users[username]; ok {
+		ids := make([]string, 0, len(user.AppPasswords))
+		for _, appPassword := range user.AppPasswords {
+			ids = append(ids, appPassword.ID)
+		}
+		return ids, nil
+	}
+	return nil, fmt.Errorf("user does not exist")
+}
+
+func (a *MemoryAuthProvide) CleanUpRevokedExpiredAppPasswords() error {
+	for _, user := range a.users {
+		for i := len(user.AppPasswords) - 1; i >= 0; i-- {
+			appPassword := user.AppPasswords[i]
+			if appPassword.Revoked || (!appPassword.ExpiresAt.IsZero() && time.Now().After(appPassword.ExpiresAt)) {
+				user.AppPasswords = append(user.AppPasswords[:i], user.AppPasswords[i+1:]...)
+			}
+		}
+	}
+	return nil
 }

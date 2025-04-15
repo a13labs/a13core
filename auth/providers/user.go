@@ -1,10 +1,14 @@
 package providers
 
+import (
+	"time"
+)
+
 type User struct {
-	Username  string   `json:"username"`
-	Password  string   `json:"password"`
-	Role      string   `json:"role"`
-	AppTokens []string `json:"app_tokens"`
+	Username     string        `json:"username"`
+	Password     string        `json:"password"`
+	Role         string        `json:"role"`
+	AppPasswords []AppPassword `json:"app_passwords,omitempty"`
 }
 
 type UserView struct {
@@ -16,9 +20,10 @@ type Users struct {
 	Users []User `json:"users"`
 }
 
-type AppToken struct {
-	Token      string `json:"token"`
-	Name       string `json:"name"`
-	Role       string `json:"role"`
-	Expiration string `json:"expiration"`
+type AppPassword struct {
+	ID        string    // Unique identifier for the app password
+	Hash      string    // Hashed app password
+	CreatedAt time.Time // Timestamp of creation
+	ExpiresAt time.Time // Optional expiration time
+	Revoked   bool      // Whether the password is revoked
 }

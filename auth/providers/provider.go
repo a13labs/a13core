@@ -7,6 +7,7 @@ import (
 
 type AuthProvider interface {
 	AuthenticateUser(username, password string) bool
+	AuthenticateWithAppPassword(username, password string) bool
 	AddUser(username, password string) error
 	RemoveUser(username string) error
 	GetRole(username string) (string, error)
@@ -16,8 +17,10 @@ type AuthProvider interface {
 	DropUsers() error
 	LoadUsers() error
 	GetUser(username string) (UserView, error)
-	GenerateAppToken(name string, username, role string, expire int, secret string) (string, error)
-	ValidateAppToken(token string, secret string) (string, error)
+	AddAppPassword(username, hash string, expire int) error
+	RevokeAppPassword(username, id string) error
+	ListAppPasswordsIds(username string) ([]string, error)
+	CleanUpRevokedExpiredAppPasswords() error
 }
 
 type AuthProviderFactory func(config json.RawMessage) AuthProvider
@@ -33,7 +36,11 @@ func GetAuthProvider() AuthProvider {
 }
 
 func AuthenticateUser(username, password string) bool {
-	return authProvider.AuthenticateUser(username, password)
+	valid := authProvider.AuthenticateUser(username, password)
+	if !valid {
+		return authProvider.AuthenticateWithAppPassword(username, password)
+	}
+	return valid
 }
 
 func AddUser(username, password string) error {
@@ -86,10 +93,28 @@ func SetRole(username, role string) error {
 	return authProvider.SetRole(username, role)
 }
 
-func GenerateAppToken(name string, username, role string, expire int, secret string) (string, error) {
-	return authProvider.GenerateAppToken(name, username, role, expire, secret)
+func GenerateAppPassword(name string, username, role string, expire int) (string, error) {
+	pw, hashedPassword, err := GenerateRandomPassword()
+
+	if err != nil {
+		return "", err
+	}
+	err = authProvider.AddAppPassword(username, hashedPassword, expire)
+	if err != nil {
+		return "", err
+	}
+
+	return pw, nil
 }
 
-func ValidateAppToken(token string, secret string) (string, error) {
-	return authProvider.ValidateAppToken(token, secret)
+func RevokeAppPassword(username, id string) error {
+	return authProvider.RevokeAppPassword(username, id)
+}
+
+func ListAppPasswordsIds(username string) ([]string, error) {
+	return authProvider.ListAppPasswordsIds(username)
+}
+
+func CleanUpRevokedExpiredAppPasswords() error {
+	return authProvider.CleanUpRevokedExpiredAppPasswords()
 }

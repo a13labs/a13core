@@ -6,8 +6,7 @@ import (
 	"io"
 	"os"
 	"sync"
-
-	"github.com/a13labs/a13core/auth/jwt"
+	"time"
 )
 
 type FileAuthProviderConfig struct {
@@ -39,6 +38,26 @@ func (a *FileAuthProvider) AuthenticateUser(username, password string) bool {
 	for _, user := range a.users.Users {
 		if user.Username == username && user.Password == hashedPassword {
 			return true
+		}
+	}
+	return false
+}
+
+func (a *FileAuthProvider) AuthenticateWithAppPassword(username, password string) bool {
+	err := a.LoadUsers()
+	if err != nil {
+		return false
+	}
+	hashedPassword := HashPassword(password)
+	for _, user := range a.users.Users {
+		if user.Username == username {
+			for _, appPassword := range user.AppPasswords {
+				if appPassword.Hash == hashedPassword && !appPassword.Revoked {
+					if appPassword.ExpiresAt.IsZero() || time.Now().Before(appPassword.ExpiresAt) {
+						return true
+					}
+				}
+			}
 		}
 	}
 	return false
@@ -241,32 +260,113 @@ func (a *FileAuthProvider) SetRole(username, role string) error {
 	return fmt.Errorf("user not found")
 }
 
-func (a *FileAuthProvider) GenerateAppToken(name string, username, role string, expire int, secret string) (string, error) {
+func (a *FileAuthProvider) AddAppPassword(username, password string, expire int) error {
 	err := a.LoadUsers()
 	if err != nil {
-		return "", err
+		return err
 	}
 	a.userStoreMux.Lock()
 	defer a.userStoreMux.Unlock()
 	for i, user := range a.users.Users {
 		if user.Username == username {
-			token, err := jwt.Create(username, role, 0, secret)
-			if err != nil {
-				return "", err
+			appPassword := AppPassword{
+				ID:        GenerateUniqueID(), // Implement a function to generate unique IDs
+				Hash:      HashPassword(password),
+				CreatedAt: time.Now(),
+				ExpiresAt: time.Now().Add(time.Duration(expire) * time.Hour),
+				Revoked:   false,
 			}
-			a.users.Users[i].AppTokens = append(a.users.Users[i].AppTokens, token)
+			a.users.Users[i].AppPasswords = append(a.users.Users[i].AppPasswords, appPassword)
 			data, err := json.MarshalIndent(a.users, "", "  ")
 			if err != nil {
-				return "", err
+				return err
 			}
 			file, err := os.Create(a.config.FilePath)
 			if err != nil {
-				return "", err
+				return err
 			}
 			defer file.Close()
 			_, err = file.Write(data)
-			return token, nil
+			return nil
 		}
 	}
-	return "", fmt.Errorf("user not found")
+	return fmt.Errorf("user not found")
+}
+
+func (a *FileAuthProvider) RevokeAppPassword(username, id string) error {
+	err := a.LoadUsers()
+	if err != nil {
+		return err
+	}
+	a.userStoreMux.Lock()
+	defer a.userStoreMux.Unlock()
+	for i, user := range a.users.Users {
+		if user.Username == username {
+			for j, appPassword := range a.users.Users[i].AppPasswords {
+				if appPassword.ID == id {
+					a.users.Users[i].AppPasswords[j].Revoked = true
+					data, err := json.MarshalIndent(a.users, "", "  ")
+					if err != nil {
+						return err
+					}
+					file, err := os.Create(a.config.FilePath)
+					if err != nil {
+						return err
+					}
+					defer file.Close()
+					_, err = file.Write(data)
+					return nil
+				}
+			}
+		}
+	}
+	return fmt.Errorf("user or app password not found")
+}
+
+func (a *FileAuthProvider) ListAppPasswordsIds(username string) ([]string, error) {
+	err := a.LoadUsers()
+	if err != nil {
+		return nil, err
+	}
+	a.userStoreMux.Lock()
+	defer a.userStoreMux.Unlock()
+	for i, user := range a.users.Users {
+		if user.Username == username {
+			var ids []string
+			for _, appPassword := range a.users.Users[i].AppPasswords {
+				ids = append(ids, appPassword.ID)
+			}
+			return ids, nil
+		}
+	}
+	return nil, fmt.Errorf("user not found")
+}
+
+func (a *FileAuthProvider) CleanUpRevokedExpiredAppPasswords() error {
+	err := a.LoadUsers()
+	if err != nil {
+		return err
+	}
+	a.userStoreMux.Lock()
+	defer a.userStoreMux.Unlock()
+	for i, _ := range a.users.Users {
+		var validAppPasswords []AppPassword
+		for _, appPassword := range a.users.Users[i].AppPasswords {
+			if !appPassword.Revoked && (appPassword.ExpiresAt.IsZero() || time.Now().Before(appPassword.ExpiresAt)) {
+				validAppPasswords = append(validAppPasswords, appPassword)
+			}
+		}
+		a.users.Users[i].AppPasswords = validAppPasswords
+	}
+	data, err := json.MarshalIndent(a.users, "", "  ")
+	if err != nil {
+		return err
+	}
+	file, err := os.Create(a.config.FilePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = file.Write(data)
+	return err
 }

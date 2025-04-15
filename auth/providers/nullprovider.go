@@ -17,6 +17,10 @@ func (a *NullAuthProvider) AuthenticateUser(username, password string) bool {
 	return true
 }
 
+func (a *NullAuthProvider) AuthenticateWithAppPassword(username, password string) bool {
+	return true
+}
+
 func (a *NullAuthProvider) AddUser(username, password string) error {
 	return nil
 }
@@ -55,4 +59,20 @@ func (a *NullAuthProvider) GetUser(username string) (UserView, error) {
 
 func (a *NullAuthProvider) SetRole(username, role string) error {
 	return fmt.Errorf("not implemented")
+}
+
+func (a *NullAuthProvider) AddAppPassword(username, password string, expire int) error {
+	return nil
+}
+
+func (a *NullAuthProvider) RevokeAppPassword(username, id string) error {
+	return nil
+}
+
+func (a *NullAuthProvider) ListAppPasswordsIds(username string) ([]string, error) {
+	return []string{}, nil
+}
+
+func (a *NullAuthProvider) CleanUpRevokedExpiredAppPasswords() error {
+	return nil
 }
