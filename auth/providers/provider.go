@@ -16,6 +16,8 @@ type AuthProvider interface {
 	DropUsers() error
 	LoadUsers() error
 	GetUser(username string) (UserView, error)
+	GenerateAppToken(name string, username, role string, expire int, secret string) (string, error)
+	ValidateAppToken(token string, secret string) (string, error)
 }
 
 type AuthProviderFactory func(config json.RawMessage) AuthProvider
@@ -82,4 +84,12 @@ func GetUser(username string) (UserView, error) {
 
 func SetRole(username, role string) error {
 	return authProvider.SetRole(username, role)
+}
+
+func GenerateAppToken(name string, username, role string, expire int, secret string) (string, error) {
+	return authProvider.GenerateAppToken(name, username, role, expire, secret)
+}
+
+func ValidateAppToken(token string, secret string) (string, error) {
+	return authProvider.ValidateAppToken(token, secret)
 }

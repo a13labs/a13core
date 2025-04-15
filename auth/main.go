@@ -3,7 +3,10 @@ package auth
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"time"
 
+	"github.com/a13labs/a13core/auth/jwt"
 	"github.com/a13labs/a13core/auth/providers"
 )
 
@@ -72,4 +75,77 @@ func GetUser(username string) (providers.UserView, error) {
 
 func SetRole(username, role string) error {
 	return providers.SetRole(username, role)
+}
+
+func CreateToken(userId, password string) (string, error) {
+
+	if CheckCredentials(userId, password) {
+		role, err := GetRole(userId)
+		if err != nil || role == "" {
+			role = "viewer"
+		}
+		return jwt.Create(userId, role, authConfig.ExpirationTime, authConfig.SecretKey)
+	}
+	return "", fmt.Errorf("invalid credentials")
+}
+
+func VerifyUserToken(userId, token string) bool {
+	claims, err := jwt.Unmap(token, authConfig.SecretKey)
+	if err != nil {
+		return false
+	}
+	if sub, ok := claims["sub"].(string); ok {
+		if sub == userId {
+			return true
+		}
+	}
+	return false
+}
+
+func VerifyToken(token string) bool {
+	_, err := jwt.Unmap(token, authConfig.SecretKey)
+	return err == nil
+}
+
+func GetRoleFromToken(token string) (string, error) {
+	claims, err := jwt.Unmap(token, authConfig.SecretKey)
+	if err != nil {
+		return "", err
+	}
+	if role, ok := claims["role"].(string); ok {
+		return role, nil
+	}
+	return "", fmt.Errorf("role not found")
+}
+
+func GetUserFromToken(token string) (string, error) {
+	claims, err := jwt.Unmap(token, authConfig.SecretKey)
+	if err != nil {
+		return "", err
+	}
+	if sub, ok := claims["sub"].(string); ok {
+		return sub, nil
+	}
+	return "", fmt.Errorf("user id not found")
+}
+
+func TokenExpired(token string) bool {
+	claims, err := jwt.Unmap(token, authConfig.SecretKey)
+	if err != nil {
+		return true
+	}
+	if exp, ok := claims["exp"].(int64); ok {
+		if int64(exp) == 0 || exp < time.Now().Unix() {
+			return false
+		}
+	}
+	return true
+}
+
+func GenerateAppToken(name string, username, role string, expire int) (string, error) {
+	return providers.GenerateAppToken(name, username, role, expire, authConfig.SecretKey)
+}
+
+func ValidateAppToken(token string) (string, error) {
+	return providers.ValidateAppToken(token, authConfig.SecretKey)
 }

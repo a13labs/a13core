@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 	"sync"
+
+	"github.com/a13labs/a13core/auth/jwt"
 )
 
 type FileAuthProviderConfig struct {
@@ -237,4 +239,34 @@ func (a *FileAuthProvider) SetRole(username, role string) error {
 		}
 	}
 	return fmt.Errorf("user not found")
+}
+
+func (a *FileAuthProvider) GenerateAppToken(name string, username, role string, expire int, secret string) (string, error) {
+	err := a.LoadUsers()
+	if err != nil {
+		return "", err
+	}
+	a.userStoreMux.Lock()
+	defer a.userStoreMux.Unlock()
+	for i, user := range a.users.Users {
+		if user.Username == username {
+			token, err := jwt.Create(username, role, 0, secret)
+			if err != nil {
+				return "", err
+			}
+			a.users.Users[i].AppTokens = append(a.users.Users[i].AppTokens, token)
+			data, err := json.MarshalIndent(a.users, "", "  ")
+			if err != nil {
+				return "", err
+			}
+			file, err := os.Create(a.config.FilePath)
+			if err != nil {
+				return "", err
+			}
+			defer file.Close()
+			_, err = file.Write(data)
+			return token, nil
+		}
+	}
+	return "", fmt.Errorf("user not found")
 }
