@@ -8,7 +8,7 @@ import (
 type AuthProvider interface {
 	AuthenticateUser(username, password string) bool
 	AuthenticateWithAppPassword(username, password string) bool
-	AddUser(username, password string) error
+	AddUser(username, password, role string) error
 	RemoveUser(username string) error
 	GetRole(username string) (string, error)
 	SetRole(username, role string) error
@@ -43,8 +43,8 @@ func AuthenticateUser(username, password string) bool {
 	return valid
 }
 
-func AddUser(username, password string) error {
-	return authProvider.AddUser(username, password)
+func AddUser(username, password, role string) error {
+	return authProvider.AddUser(username, password, role)
 }
 
 func RemoveUser(username string) error {

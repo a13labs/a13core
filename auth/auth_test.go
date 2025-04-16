@@ -43,7 +43,7 @@ func TestInitializeAuth(t *testing.T) {
 func TestAddUser(t *testing.T) {
 	setupMemoryProvider()
 
-	err := AddUser("testuser", "password123")
+	err := AddUser("testuser", "password123", "user")
 	if err != nil {
 		t.Fatalf("Failed to add user: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestAddUser(t *testing.T) {
 func TestCheckCredentials(t *testing.T) {
 	setupMemoryProvider()
 
-	err := AddUser("testuser", "password123")
+	err := AddUser("testuser", "password123", "user")
 	if err != nil {
 		t.Fatalf("Failed to add user: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestCheckCredentials(t *testing.T) {
 func TestRemoveUser(t *testing.T) {
 	setupMemoryProvider()
 
-	err := AddUser("testuser", "password123")
+	err := AddUser("testuser", "password123", "user")
 	if err != nil {
 		t.Fatalf("Failed to add user: %v", err)
 	}
@@ -101,7 +101,7 @@ func TestRemoveUser(t *testing.T) {
 func TestChangePassword(t *testing.T) {
 	setupMemoryProvider()
 
-	err := AddUser("testuser", "password123")
+	err := AddUser("testuser", "password123", "user")
 	if err != nil {
 		t.Fatalf("Failed to add user: %v", err)
 	}
@@ -119,7 +119,7 @@ func TestChangePassword(t *testing.T) {
 func TestSetRole(t *testing.T) {
 	setupMemoryProvider()
 
-	err := AddUser("testuser", "password123")
+	err := AddUser("testuser", "password123", "user")
 	if err != nil {
 		t.Fatalf("Failed to add user: %v", err)
 	}
@@ -142,7 +142,7 @@ func TestSetRole(t *testing.T) {
 func TestGenerateAppPassword(t *testing.T) {
 	setupMemoryProvider()
 
-	err := AddUser("testuser", "password123")
+	err := AddUser("testuser", "password123", "user")
 	if err != nil {
 		t.Fatalf("Failed to add user: %v", err)
 	}

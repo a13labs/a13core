@@ -21,7 +21,7 @@ func (a *NullAuthProvider) AuthenticateWithAppPassword(username, password string
 	return true
 }
 
-func (a *NullAuthProvider) AddUser(username, password string) error {
+func (a *NullAuthProvider) AddUser(username, password, role string) error {
 	return nil
 }
 

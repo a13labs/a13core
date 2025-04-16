@@ -19,7 +19,7 @@ func NewMemoryAuthProvider(config json.RawMessage) AuthProvider {
 
 func (a *MemoryAuthProvide) AuthenticateUser(username, password string) bool {
 	if user, ok := a.users[username]; ok {
-		return user.Password == HashPassword(password)
+		return VerifyPassword(user.Password, password)
 	}
 	return false
 }
@@ -27,7 +27,7 @@ func (a *MemoryAuthProvide) AuthenticateUser(username, password string) bool {
 func (a *MemoryAuthProvide) AuthenticateWithAppPassword(username, password string) bool {
 	if user, ok := a.users[username]; ok {
 		for _, appPassword := range user.AppPasswords {
-			if appPassword.Hash == HashPassword(password) && !appPassword.Revoked {
+			if VerifyPassword(appPassword.Hash, password) && !appPassword.Revoked {
 				if appPassword.ExpiresAt.IsZero() || time.Now().Before(appPassword.ExpiresAt) {
 					return true
 				}
@@ -37,13 +37,24 @@ func (a *MemoryAuthProvide) AuthenticateWithAppPassword(username, password strin
 	return false
 }
 
-func (a *MemoryAuthProvide) AddUser(username, password string) error {
+func (a *MemoryAuthProvide) AddUser(username, password, role string) error {
 
 	if _, ok := a.users[username]; ok {
 		return fmt.Errorf("user already exists")
 	}
 
-	a.users[username].Password = HashPassword(password)
+	hashedPassword, err := HashPassword(password)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %v", err)
+	}
+
+	a.users[username] = &User{
+		Username:     username,
+		Password:     hashedPassword,
+		Role:         role,
+		AppPasswords: []AppPassword{},
+	}
+
 	return nil
 }
 
@@ -70,7 +81,12 @@ func (a *MemoryAuthProvide) ChangePassword(username, password string) error {
 		return fmt.Errorf("user does not exist")
 	}
 
-	a.users[username].Password = HashPassword(password)
+	hashedPassword, err := HashPassword(password)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %v", err)
+	}
+	a.users[username].Password = hashedPassword
+
 	return nil
 }
 
@@ -110,11 +126,16 @@ func (a *MemoryAuthProvide) SetRole(username, role string) error {
 
 func (a *MemoryAuthProvide) AddAppPassword(username, password string, expire int) error {
 	if user, ok := a.users[username]; ok {
-		appPassword := AppPassword{
-			Hash: HashPassword(password),
+		hashedPassword, err := HashPassword(password)
+		if err != nil {
+			return fmt.Errorf("failed to hash password: %v", err)
 		}
-		if expire > 0 {
-			appPassword.ExpiresAt = time.Now().Add(time.Duration(expire) * time.Hour)
+		appPassword := AppPassword{
+			ID:        GenerateUniqueID(), // Implement a function to generate unique IDs
+			Hash:      hashedPassword,
+			ExpiresAt: time.Now().Add(time.Duration(expire) * time.Hour),
+			CreatedAt: time.Now(),
+			Revoked:   false,
 		}
 		user.AppPasswords = append(user.AppPasswords, appPassword)
 		return nil

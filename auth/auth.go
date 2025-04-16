@@ -46,8 +46,8 @@ func CheckCredentials(username, password string) bool {
 	return providers.AuthenticateUser(username, password)
 }
 
-func AddUser(username, password string) error {
-	return providers.AddUser(username, password)
+func AddUser(username, password, role string) error {
+	return providers.AddUser(username, password, role)
 }
 
 func RemoveUser(username string) error {

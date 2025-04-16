@@ -34,9 +34,9 @@ func (a *FileAuthProvider) AuthenticateUser(username, password string) bool {
 	if err != nil {
 		return false
 	}
-	hashedPassword := HashPassword(password)
+
 	for _, user := range a.users.Users {
-		if user.Username == username && user.Password == hashedPassword {
+		if user.Username == username && VerifyPassword(user.Password, password) {
 			return true
 		}
 	}
@@ -48,11 +48,10 @@ func (a *FileAuthProvider) AuthenticateWithAppPassword(username, password string
 	if err != nil {
 		return false
 	}
-	hashedPassword := HashPassword(password)
 	for _, user := range a.users.Users {
 		if user.Username == username {
 			for _, appPassword := range user.AppPasswords {
-				if appPassword.Hash == hashedPassword && !appPassword.Revoked {
+				if VerifyPassword(appPassword.Hash, password) && !appPassword.Revoked {
 					if appPassword.ExpiresAt.IsZero() || time.Now().Before(appPassword.ExpiresAt) {
 						return true
 					}
@@ -63,7 +62,7 @@ func (a *FileAuthProvider) AuthenticateWithAppPassword(username, password string
 	return false
 }
 
-func (a *FileAuthProvider) AddUser(username, password string) error {
+func (a *FileAuthProvider) AddUser(username, password, role string) error {
 	err := a.LoadUsers()
 	if err != nil {
 		return err
@@ -76,7 +75,16 @@ func (a *FileAuthProvider) AddUser(username, password string) error {
 			return fmt.Errorf("user already exists")
 		}
 	}
-	a.users.Users = append(a.users.Users, User{Username: username, Password: HashPassword(password)})
+	hashedPassword, err := HashPassword(password)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %v", err)
+	}
+	a.users.Users = append(a.users.Users, User{
+		Username:     username,
+		Password:     hashedPassword,
+		Role:         role,
+		AppPasswords: []AppPassword{},
+	})
 	data, err := json.MarshalIndent(a.users, "", "  ")
 	if err != nil {
 		return err
@@ -137,7 +145,11 @@ func (a *FileAuthProvider) ChangePassword(username, password string) error {
 	defer a.userStoreMux.Unlock()
 	for i, user := range a.users.Users {
 		if user.Username == username {
-			a.users.Users[i].Password = HashPassword(password)
+			hashedPassword, err := HashPassword(password)
+			if err != nil {
+				return fmt.Errorf("failed to hash password: %v", err)
+			}
+			a.users.Users[i].Password = hashedPassword
 			data, err := json.MarshalIndent(a.users, "", "  ")
 			if err != nil {
 				return err
@@ -269,9 +281,13 @@ func (a *FileAuthProvider) AddAppPassword(username, password string, expire int)
 	defer a.userStoreMux.Unlock()
 	for i, user := range a.users.Users {
 		if user.Username == username {
+			hashedPassword, err := HashPassword(password)
+			if err != nil {
+				return fmt.Errorf("failed to hash password: %v", err)
+			}
 			appPassword := AppPassword{
 				ID:        GenerateUniqueID(), // Implement a function to generate unique IDs
-				Hash:      HashPassword(password),
+				Hash:      hashedPassword,
 				CreatedAt: time.Now(),
 				ExpiresAt: time.Now().Add(time.Duration(expire) * time.Hour),
 				Revoked:   false,
