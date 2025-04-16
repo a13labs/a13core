@@ -19,7 +19,11 @@ func setupFileProvider() {
 }
 
 func cleanUpFileProvider() {
-	// Clean up the test file after tests
+	// Clean up the test file after tests if the file exists
+	if _, err := os.Stat("test_users.json"); os.IsNotExist(err) {
+		return
+	}
+	// Remove the test file
 	err := os.Remove("test_users.json")
 	if err != nil {
 		panic(err)
@@ -169,7 +173,13 @@ func TestMemoryProviderGenerateAppPassword(t *testing.T) {
 	if appPassword == "" {
 		t.Errorf("Expected app password to be generated")
 	}
+
+	// Check if we can authenticate with the app password
+	if !CheckCredentials("testuser", appPassword) {
+		t.Errorf("Expected app password to be valid")
+	}
 }
+
 func TestFileProviderInitializeAuth(t *testing.T) {
 	setupFileProvider()
 	defer cleanUpFileProvider()
@@ -319,5 +329,10 @@ func TestFileProviderGenerateAppPassword(t *testing.T) {
 
 	if appPassword == "" {
 		t.Errorf("Expected app password to be generated")
+	}
+
+	// Check if we can authenticate with the app password
+	if !CheckCredentials("testuser", appPassword) {
+		t.Errorf("Expected app password to be valid")
 	}
 }

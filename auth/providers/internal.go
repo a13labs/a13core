@@ -17,22 +17,16 @@ func GenerateUniqueID() string {
 	return base64.RawURLEncoding.EncodeToString(rawID)
 }
 
-func GenerateRandomPassword() (string, string, error) {
+func GenerateRandomPassword() (string, error) {
 	// Generate a random password
 	rawPassword := make([]byte, 16) // 16 bytes = 128 bits
 	_, err := rand.Read(rawPassword)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	password := base64.RawURLEncoding.EncodeToString(rawPassword)
 
-	// Hash the password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return "", "", err
-	}
-
-	return password, string(hashedPassword), nil
+	return password, nil
 }
 
 func HashPassword(password string) (string, error) {

@@ -113,15 +113,11 @@ func (a *MemoryAuthProvide) SetRole(username, role string) error {
 	return fmt.Errorf("user does not exist")
 }
 
-func (a *MemoryAuthProvide) AddAppPassword(username, password string, expire int) error {
+func (a *MemoryAuthProvide) AddAppPassword(username, hash string, expire int) error {
 	if user, ok := a.users[username]; ok {
-		hashedPassword, err := HashPassword(password)
-		if err != nil {
-			return fmt.Errorf("failed to hash password: %v", err)
-		}
 		appPassword := AppPassword{
 			ID:        GenerateUniqueID(), // Implement a function to generate unique IDs
-			Hash:      hashedPassword,
+			Hash:      hash,
 			ExpiresAt: time.Now().Add(time.Duration(expire) * time.Hour),
 			CreatedAt: time.Now(),
 			Revoked:   false,

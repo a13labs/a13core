@@ -264,7 +264,7 @@ func (a *FileAuthProvider) SetRole(username, role string) error {
 	return fmt.Errorf("user not found")
 }
 
-func (a *FileAuthProvider) AddAppPassword(username, password string, expire int) error {
+func (a *FileAuthProvider) AddAppPassword(username, hash string, expire int) error {
 	err := a.LoadUsers()
 	if err != nil {
 		return err
@@ -273,13 +273,9 @@ func (a *FileAuthProvider) AddAppPassword(username, password string, expire int)
 	defer a.userStoreMux.Unlock()
 	for i, user := range a.users.Users {
 		if user.Username == username {
-			hashedPassword, err := HashPassword(password)
-			if err != nil {
-				return fmt.Errorf("failed to hash password: %v", err)
-			}
 			appPassword := AppPassword{
 				ID:        GenerateUniqueID(), // Implement a function to generate unique IDs
-				Hash:      hashedPassword,
+				Hash:      hash,
 				CreatedAt: time.Now(),
 				ExpiresAt: time.Now().Add(time.Duration(expire) * time.Hour),
 				Revoked:   false,

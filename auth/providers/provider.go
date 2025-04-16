@@ -100,12 +100,18 @@ func SetRole(username, role string) error {
 }
 
 func GenerateAppPassword(name string, username, role string, expire int) (string, error) {
-	pw, hashedPassword, err := GenerateRandomPassword()
+	pw, err := GenerateRandomPassword()
 
 	if err != nil {
 		return "", err
 	}
-	err = authProvider.AddAppPassword(username, hashedPassword, expire)
+
+	hash, err := HashPassword(pw)
+	if err != nil {
+		return "", fmt.Errorf("failed to hash password: %v", err)
+	}
+
+	err = authProvider.AddAppPassword(username, hash, expire)
 	if err != nil {
 		return "", err
 	}
