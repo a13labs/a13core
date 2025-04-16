@@ -399,7 +399,7 @@ func (a *FileAuthProvider) CleanUpRevokedExpiredAppPasswords() error {
 	}
 	a.userStoreMux.Lock()
 	defer a.userStoreMux.Unlock()
-	for i, _ := range a.users.Users {
+	for i := range a.users.Users {
 		var validAppPasswords []AppPassword
 		for _, appPassword := range a.users.Users[i].AppPasswords {
 			if !appPassword.Revoked && (appPassword.ExpiresAt.IsZero() || time.Now().Before(appPassword.ExpiresAt)) {
