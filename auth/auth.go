@@ -54,7 +54,7 @@ func RemoveUser(username string) error {
 	return providers.RemoveUser(username)
 }
 
-func GetUsers() ([]string, error) {
+func GetUsers() ([]providers.UserView, error) {
 	return providers.GetUsers()
 }
 

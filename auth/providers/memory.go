@@ -80,10 +80,25 @@ func (a *MemoryAuthProvide) RemoveUser(username string) error {
 	return nil
 }
 
-func (a *MemoryAuthProvide) GetUsers() ([]string, error) {
-	users := make([]string, 0, len(a.users))
+func (a *MemoryAuthProvide) GetUsers() ([]UserView, error) {
+	users := make([]UserView, 0, len(a.users))
+	i := 0
 	for user := range a.users {
-		users = append(users, user)
+		users = append(users, UserView{
+			Username:     user,
+			Role:         a.users[user].Role,
+			AppPasswords: make([]AppPasswordView, 0, len(a.users[user].AppPasswords)),
+		})
+		for _, appPassword := range a.users[user].AppPasswords {
+			users[i].AppPasswords = append(users[i].AppPasswords, AppPasswordView{
+				ID:        appPassword.ID,
+				CreatedAt: appPassword.CreatedAt,
+				ExpiresAt: appPassword.ExpiresAt,
+				Role:      appPassword.Role,
+				Revoked:   appPassword.Revoked,
+			})
+		}
+		i++
 	}
 	return users, nil
 }
@@ -102,7 +117,7 @@ func (a *MemoryAuthProvide) DropUsers() error {
 }
 
 func (a *MemoryAuthProvide) LoadUsers() error {
-	return fmt.Errorf("not implemented")
+	return nil
 }
 
 func (a *MemoryAuthProvide) GetRole(username string) (string, error) {

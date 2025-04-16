@@ -71,7 +71,7 @@ func TestMemoryProviderAddUser(t *testing.T) {
 		t.Fatalf("Failed to get users: %v", err)
 	}
 
-	if len(users) != 1 || users[0] != "testuser" {
+	if len(users) != 1 || users[0].Username != "testuser" {
 		t.Errorf("Expected user 'testuser' to be added, got %v", users)
 	}
 }
@@ -272,7 +272,7 @@ func TestFileProviderAddUser(t *testing.T) {
 		t.Fatalf("Failed to get users: %v", err)
 	}
 
-	if len(users) != 1 || users[0] != "testuser" {
+	if len(users) != 1 || users[0].Username != "testuser" {
 		t.Errorf("Expected user 'testuser' to be added, got %v", users)
 	}
 }

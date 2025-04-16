@@ -135,16 +135,29 @@ func (a *FileAuthProvider) RemoveUser(username string) error {
 	return fmt.Errorf("user not found")
 }
 
-func (a *FileAuthProvider) GetUsers() ([]string, error) {
+func (a *FileAuthProvider) GetUsers() ([]UserView, error) {
 	err := a.LoadUsers()
 	if err != nil {
 		return nil, err
 	}
-	var usernames []string
-	for _, user := range a.users.Users {
-		usernames = append(usernames, user.Username)
+	users := make([]UserView, 0, len(a.users.Users))
+	for i, user := range a.users.Users {
+		users = append(users, UserView{
+			Username:     user.Username,
+			Role:         user.Role,
+			AppPasswords: make([]AppPasswordView, 0, len(user.AppPasswords)),
+		})
+		for _, appPassword := range user.AppPasswords {
+			users[i].AppPasswords = append(users[i].AppPasswords, AppPasswordView{
+				ID:        appPassword.ID,
+				CreatedAt: appPassword.CreatedAt,
+				ExpiresAt: appPassword.ExpiresAt,
+				Role:      appPassword.Role,
+				Revoked:   appPassword.Revoked,
+			})
+		}
 	}
-	return usernames, nil
+	return users, nil
 }
 
 func (a *FileAuthProvider) ChangePassword(username, hash string) error {

@@ -48,7 +48,7 @@ type AuthProvider interface {
 	ChangePassword(username, hash string) error
 	GetRole(username string) (string, error)
 	SetRole(username, role string) error
-	GetUsers() ([]string, error)
+	GetUsers() ([]UserView, error)
 	DropUsers() error
 	LoadUsers() error
 	AddAppPassword(username, hash, role string, expire int) (string, error)
