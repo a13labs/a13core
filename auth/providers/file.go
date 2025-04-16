@@ -36,7 +36,7 @@ func (a *FileAuthProvider) AuthenticateUser(username, password string) bool {
 	}
 
 	for _, user := range a.users.Users {
-		if user.Username == username && VerifyPassword(user.Password, password) {
+		if user.Username == username && VerifyPassword(user.Hash, password) {
 			return true
 		}
 	}
@@ -62,7 +62,7 @@ func (a *FileAuthProvider) AuthenticateWithAppPassword(username, password string
 	return false
 }
 
-func (a *FileAuthProvider) AddUser(username, password, role string) error {
+func (a *FileAuthProvider) AddUser(username, hash, role string) error {
 	err := a.LoadUsers()
 	if err != nil {
 		return err
@@ -75,13 +75,9 @@ func (a *FileAuthProvider) AddUser(username, password, role string) error {
 			return fmt.Errorf("user already exists")
 		}
 	}
-	hashedPassword, err := HashPassword(password)
-	if err != nil {
-		return fmt.Errorf("failed to hash password: %v", err)
-	}
 	a.users.Users = append(a.users.Users, User{
 		Username:     username,
-		Password:     hashedPassword,
+		Hash:         hash,
 		Role:         role,
 		AppPasswords: []AppPassword{},
 	})
@@ -136,7 +132,7 @@ func (a *FileAuthProvider) GetUsers() ([]string, error) {
 	return usernames, nil
 }
 
-func (a *FileAuthProvider) ChangePassword(username, password string) error {
+func (a *FileAuthProvider) ChangePassword(username, hash string) error {
 	err := a.LoadUsers()
 	if err != nil {
 		return err
@@ -145,11 +141,7 @@ func (a *FileAuthProvider) ChangePassword(username, password string) error {
 	defer a.userStoreMux.Unlock()
 	for i, user := range a.users.Users {
 		if user.Username == username {
-			hashedPassword, err := HashPassword(password)
-			if err != nil {
-				return fmt.Errorf("failed to hash password: %v", err)
-			}
-			a.users.Users[i].Password = hashedPassword
+			a.users.Users[i].Hash = hash
 			data, err := json.MarshalIndent(a.users, "", "  ")
 			if err != nil {
 				return err

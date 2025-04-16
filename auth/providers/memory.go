@@ -19,7 +19,7 @@ func NewMemoryAuthProvider(config json.RawMessage) AuthProvider {
 
 func (a *MemoryAuthProvide) AuthenticateUser(username, password string) bool {
 	if user, ok := a.users[username]; ok {
-		return VerifyPassword(user.Password, password)
+		return VerifyPassword(user.Hash, password)
 	}
 	return false
 }
@@ -37,20 +37,15 @@ func (a *MemoryAuthProvide) AuthenticateWithAppPassword(username, password strin
 	return false
 }
 
-func (a *MemoryAuthProvide) AddUser(username, password, role string) error {
+func (a *MemoryAuthProvide) AddUser(username, hash, role string) error {
 
 	if _, ok := a.users[username]; ok {
 		return fmt.Errorf("user already exists")
 	}
 
-	hashedPassword, err := HashPassword(password)
-	if err != nil {
-		return fmt.Errorf("failed to hash password: %v", err)
-	}
-
 	a.users[username] = &User{
 		Username:     username,
-		Password:     hashedPassword,
+		Hash:         hash,
 		Role:         role,
 		AppPasswords: []AppPassword{},
 	}
@@ -76,17 +71,11 @@ func (a *MemoryAuthProvide) GetUsers() ([]string, error) {
 	return users, nil
 }
 
-func (a *MemoryAuthProvide) ChangePassword(username, password string) error {
+func (a *MemoryAuthProvide) ChangePassword(username, hash string) error {
 	if _, ok := a.users[username]; !ok {
 		return fmt.Errorf("user does not exist")
 	}
-
-	hashedPassword, err := HashPassword(password)
-	if err != nil {
-		return fmt.Errorf("failed to hash password: %v", err)
-	}
-	a.users[username].Password = hashedPassword
-
+	a.users[username].Hash = hash
 	return nil
 }
 

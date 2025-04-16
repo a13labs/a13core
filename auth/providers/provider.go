@@ -8,12 +8,12 @@ import (
 type AuthProvider interface {
 	AuthenticateUser(username, password string) bool
 	AuthenticateWithAppPassword(username, password string) bool
-	AddUser(username, password, role string) error
+	AddUser(username, hash, role string) error
 	RemoveUser(username string) error
 	GetRole(username string) (string, error)
 	SetRole(username, role string) error
 	GetUsers() ([]string, error)
-	ChangePassword(username, password string) error
+	ChangePassword(username, hash string) error
 	DropUsers() error
 	LoadUsers() error
 	GetUser(username string) (UserView, error)
@@ -44,7 +44,11 @@ func AuthenticateUser(username, password string) bool {
 }
 
 func AddUser(username, password, role string) error {
-	return authProvider.AddUser(username, password, role)
+	hash, err := HashPassword(password)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %v", err)
+	}
+	return authProvider.AddUser(username, hash, role)
 }
 
 func RemoveUser(username string) error {
@@ -56,7 +60,11 @@ func GetUsers() ([]string, error) {
 }
 
 func ChangePassword(username, password string) error {
-	return authProvider.ChangePassword(username, password)
+	hash, err := HashPassword(password)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %v", err)
+	}
+	return authProvider.ChangePassword(username, hash)
 }
 
 func DropUsers() error {
@@ -73,8 +81,6 @@ func InitializeAuthProvider(provider string, config json.RawMessage) error {
 		SetAuthProviderFactory(NewFileAuthProvider, config)
 	case "memory":
 		SetAuthProviderFactory(NewMemoryAuthProvider, config)
-	case "null":
-		SetAuthProviderFactory(NewNullAuthProvider, config)
 	default:
 		return fmt.Errorf("unsupported auth provider")
 	}
