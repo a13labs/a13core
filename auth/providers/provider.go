@@ -7,7 +7,7 @@ import (
 
 var authProvider AuthProvider
 
-func SetAuthProviderFactory(factory AuthProviderFactory, config json.RawMessage) {
+func SetAuthProvider(factory AuthProviderFactory, config json.RawMessage) {
 	authProvider = factory(config)
 }
 
@@ -58,9 +58,9 @@ func GetRole(username string) (string, error) {
 func InitializeAuthProvider(provider string, config json.RawMessage) error {
 	switch provider {
 	case "file":
-		SetAuthProviderFactory(NewFileAuthProvider, config)
+		SetAuthProvider(NewFileAuthProvider, config)
 	case "memory":
-		SetAuthProviderFactory(NewMemoryAuthProvider, config)
+		SetAuthProvider(NewMemoryAuthProvider, config)
 	default:
 		return fmt.Errorf("unsupported auth provider")
 	}
