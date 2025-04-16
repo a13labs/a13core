@@ -31,6 +31,7 @@ type UserView struct {
 	Role         string            `json:"role"`
 	AppPasswords []AppPasswordView `json:"app_passwords,omitempty"`
 }
+
 type Users struct {
 	Users []User `json:"users"`
 }
