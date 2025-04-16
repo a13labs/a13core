@@ -29,37 +29,52 @@ func NewFileAuthProvider(config json.RawMessage) AuthProvider {
 	return &FileAuthProvider{config: c}
 }
 
-func (a *FileAuthProvider) AuthenticateUser(username, password string) bool {
+func (a *FileAuthProvider) AuthenticateUser(username, password string) *UserView {
 	err := a.LoadUsers()
 	if err != nil {
-		return false
+		return nil
 	}
 
 	for _, user := range a.users.Users {
 		if user.Username == username && VerifyPassword(user.Hash, password) {
-			return true
+			return &UserView{
+				Username: user.Username,
+				Role:     user.Role,
+			}
 		}
 	}
-	return false
+	return nil
 }
 
-func (a *FileAuthProvider) AuthenticateWithAppPassword(username, password string) bool {
+func (a *FileAuthProvider) AuthenticateWithAppPassword(username, password string) *UserView {
 	err := a.LoadUsers()
 	if err != nil {
-		return false
+		return nil
 	}
 	for _, user := range a.users.Users {
 		if user.Username == username {
 			for _, appPassword := range user.AppPasswords {
 				if VerifyPassword(appPassword.Hash, password) && !appPassword.Revoked {
 					if appPassword.ExpiresAt.IsZero() || time.Now().Before(appPassword.ExpiresAt) {
-						return true
+						return &UserView{
+							Username: user.Username,
+							Role:     user.Role,
+							AppPasswords: []AppPasswordView{
+								{
+									ID:        appPassword.ID,
+									CreatedAt: appPassword.CreatedAt,
+									ExpiresAt: appPassword.ExpiresAt,
+									Role:      appPassword.Role,
+									Revoked:   appPassword.Revoked,
+								},
+							},
+						}
 					}
 				}
 			}
 		}
 	}
-	return false
+	return nil
 }
 
 func (a *FileAuthProvider) AddUser(username, hash, role string) error {
@@ -264,10 +279,10 @@ func (a *FileAuthProvider) SetRole(username, role string) error {
 	return fmt.Errorf("user not found")
 }
 
-func (a *FileAuthProvider) AddAppPassword(username, hash string, expire int) error {
+func (a *FileAuthProvider) AddAppPassword(username, hash, role string, expire int) (string, error) {
 	err := a.LoadUsers()
 	if err != nil {
-		return err
+		return "", err
 	}
 	a.userStoreMux.Lock()
 	defer a.userStoreMux.Unlock()
@@ -278,23 +293,24 @@ func (a *FileAuthProvider) AddAppPassword(username, hash string, expire int) err
 				Hash:      hash,
 				CreatedAt: time.Now(),
 				ExpiresAt: time.Now().Add(time.Duration(expire) * time.Hour),
+				Role:      role,
 				Revoked:   false,
 			}
 			a.users.Users[i].AppPasswords = append(a.users.Users[i].AppPasswords, appPassword)
 			data, err := json.MarshalIndent(a.users, "", "  ")
 			if err != nil {
-				return err
+				return "", err
 			}
 			file, err := os.Create(a.config.FilePath)
 			if err != nil {
-				return err
+				return "", err
 			}
 			defer file.Close()
 			_, err = file.Write(data)
-			return nil
+			return appPassword.ID, nil
 		}
 	}
-	return fmt.Errorf("user not found")
+	return "", fmt.Errorf("user not found")
 }
 
 func (a *FileAuthProvider) RevokeAppPassword(username, id string) error {

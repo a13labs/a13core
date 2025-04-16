@@ -84,11 +84,20 @@ func TestMemoryProviderCheckCredentials(t *testing.T) {
 		t.Fatalf("Failed to add user: %v", err)
 	}
 
-	if !CheckCredentials("testuser", "password123") {
+	userView := CheckCredentials("testuser", "password123")
+	if userView == nil {
 		t.Errorf("Expected credentials to be valid")
 	}
 
-	if CheckCredentials("testuser", "wrongpassword") {
+	if userView.Username != "testuser" {
+		t.Errorf("Expected username to be 'testuser', got '%s'", userView.Username)
+	}
+
+	if userView.Role != "user" {
+		t.Errorf("Expected role to be 'user', got '%s'", userView.Role)
+	}
+
+	if CheckCredentials("testuser", "wrongpassword") != nil {
 		t.Errorf("Expected credentials to be invalid")
 	}
 }
@@ -129,8 +138,17 @@ func TestMemoryProviderChangePassword(t *testing.T) {
 		t.Fatalf("Failed to change password: %v", err)
 	}
 
-	if !CheckCredentials("testuser", "newpassword") {
-		t.Errorf("Expected new password to be valid")
+	userView := CheckCredentials("testuser", "newpassword")
+	if userView == nil {
+		t.Errorf("Expected credentials to be valid")
+	}
+
+	if userView.Username != "testuser" {
+		t.Errorf("Expected username to be 'testuser', got '%s'", userView.Username)
+	}
+
+	if userView.Role != "user" {
+		t.Errorf("Expected role to be 'user', got '%s'", userView.Role)
 	}
 }
 
@@ -165,18 +183,38 @@ func TestMemoryProviderGenerateAppPassword(t *testing.T) {
 		t.Fatalf("Failed to add user: %v", err)
 	}
 
-	appPassword, err := GenerateAppPassword("app1", "testuser", "admin", 24)
+	id, appPassword, err := GenerateAppPassword("app1", "testuser", "admin", 24)
 	if err != nil {
 		t.Fatalf("Failed to generate app password: %v", err)
 	}
 
-	if appPassword == "" {
-		t.Errorf("Expected app password to be generated")
+	if appPassword == "" || id == "" {
+		t.Errorf("Expected app password to be generated and ID to be non-empty")
 	}
 
-	// Check if we can authenticate with the app password
-	if !CheckCredentials("testuser", appPassword) {
-		t.Errorf("Expected app password to be valid")
+	userView := CheckCredentials("testuser", appPassword)
+	if userView == nil {
+		t.Errorf("Expected credentials to be valid")
+	}
+
+	if userView.Username != "testuser" {
+		t.Errorf("Expected username to be 'testuser', got '%s'", userView.Username)
+	}
+
+	if userView.Role != "user" {
+		t.Errorf("Expected role to be 'user', got '%s'", userView.Role)
+	}
+
+	if userView.AppPasswords[0].ID != id {
+		t.Errorf("Expected app password ID to match, got '%s'", userView.AppPasswords[0].ID)
+	}
+
+	if userView.AppPasswords[0].Revoked {
+		t.Errorf("Expected app password to be active, got revoked")
+	}
+
+	if userView.AppPasswords[0].Role != "admin" {
+		t.Errorf("Expected app password role to be 'admin', got '%s'", userView.AppPasswords[0].Role)
 	}
 }
 
@@ -237,11 +275,11 @@ func TestFileProviderCheckCredentials(t *testing.T) {
 		t.Fatalf("Failed to add user: %v", err)
 	}
 
-	if !CheckCredentials("testuser", "password123") {
+	if CheckCredentials("testuser", "password123") == nil {
 		t.Errorf("Expected credentials to be valid")
 	}
 
-	if CheckCredentials("testuser", "wrongpassword") {
+	if CheckCredentials("testuser", "wrongpassword") != nil {
 		t.Errorf("Expected credentials to be invalid")
 	}
 }
@@ -284,7 +322,7 @@ func TestFileProviderChangePassword(t *testing.T) {
 		t.Fatalf("Failed to change password: %v", err)
 	}
 
-	if !CheckCredentials("testuser", "newpassword") {
+	if CheckCredentials("testuser", "newpassword") == nil {
 		t.Errorf("Expected new password to be valid")
 	}
 }
@@ -322,17 +360,37 @@ func TestFileProviderGenerateAppPassword(t *testing.T) {
 		t.Fatalf("Failed to add user: %v", err)
 	}
 
-	appPassword, err := GenerateAppPassword("app1", "testuser", "admin", 24)
+	id, appPassword, err := GenerateAppPassword("app1", "testuser", "admin", 24)
 	if err != nil {
 		t.Fatalf("Failed to generate app password: %v", err)
 	}
 
-	if appPassword == "" {
-		t.Errorf("Expected app password to be generated")
+	if appPassword == "" || id == "" {
+		t.Errorf("Expected app password to be generated and ID to be non-empty")
 	}
 
-	// Check if we can authenticate with the app password
-	if !CheckCredentials("testuser", appPassword) {
-		t.Errorf("Expected app password to be valid")
+	userView := CheckCredentials("testuser", appPassword)
+	if userView == nil {
+		t.Errorf("Expected credentials to be valid")
+	}
+
+	if userView.Username != "testuser" {
+		t.Errorf("Expected username to be 'testuser', got '%s'", userView.Username)
+	}
+
+	if userView.Role != "user" {
+		t.Errorf("Expected role to be 'user', got '%s'", userView.Role)
+	}
+
+	if userView.AppPasswords[0].ID != id {
+		t.Errorf("Expected app password ID to match, got '%s'", userView.AppPasswords[0].ID)
+	}
+
+	if userView.AppPasswords[0].Revoked {
+		t.Errorf("Expected app password to be active, got revoked")
+	}
+
+	if userView.AppPasswords[0].Role != "admin" {
+		t.Errorf("Expected app password role to be 'admin', got '%s'", userView.AppPasswords[0].Role)
 	}
 }

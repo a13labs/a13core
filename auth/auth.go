@@ -42,7 +42,7 @@ func GetRole(username string) (string, error) {
 	return providers.GetRole(username)
 }
 
-func CheckCredentials(username, password string) bool {
+func CheckCredentials(username, password string) *providers.UserView {
 	return providers.AuthenticateUser(username, password)
 }
 
@@ -74,6 +74,6 @@ func SetRole(username, role string) error {
 	return providers.SetRole(username, role)
 }
 
-func GenerateAppPassword(name, username, role string, expire int) (string, error) {
+func GenerateAppPassword(name, username, role string, expire int) (string, string, error) {
 	return providers.GenerateAppPassword(name, username, role, expire)
 }

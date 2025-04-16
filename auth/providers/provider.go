@@ -5,26 +5,6 @@ import (
 	"fmt"
 )
 
-type AuthProvider interface {
-	AuthenticateUser(username, password string) bool
-	AuthenticateWithAppPassword(username, password string) bool
-	AddUser(username, hash, role string) error
-	RemoveUser(username string) error
-	GetRole(username string) (string, error)
-	SetRole(username, role string) error
-	GetUsers() ([]string, error)
-	ChangePassword(username, hash string) error
-	DropUsers() error
-	LoadUsers() error
-	GetUser(username string) (UserView, error)
-	AddAppPassword(username, hash string, expire int) error
-	RevokeAppPassword(username, id string) error
-	ListAppPasswordsIds(username string) ([]string, error)
-	CleanUpRevokedExpiredAppPasswords() error
-}
-
-type AuthProviderFactory func(config json.RawMessage) AuthProvider
-
 var authProvider AuthProvider
 
 func SetAuthProviderFactory(factory AuthProviderFactory, config json.RawMessage) {
@@ -35,12 +15,12 @@ func GetAuthProvider() AuthProvider {
 	return authProvider
 }
 
-func AuthenticateUser(username, password string) bool {
-	valid := authProvider.AuthenticateUser(username, password)
-	if !valid {
+func AuthenticateUser(username, password string) *UserView {
+	user := authProvider.AuthenticateUser(username, password)
+	if user == nil {
 		return authProvider.AuthenticateWithAppPassword(username, password)
 	}
-	return valid
+	return user
 }
 
 func AddUser(username, password, role string) error {
@@ -99,24 +79,24 @@ func SetRole(username, role string) error {
 	return authProvider.SetRole(username, role)
 }
 
-func GenerateAppPassword(name string, username, role string, expire int) (string, error) {
+func GenerateAppPassword(name string, username, role string, expire int) (string, string, error) {
 	pw, err := GenerateRandomPassword()
 
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	hash, err := HashPassword(pw)
 	if err != nil {
-		return "", fmt.Errorf("failed to hash password: %v", err)
+		return "", "", fmt.Errorf("failed to hash password: %v", err)
 	}
 
-	err = authProvider.AddAppPassword(username, hash, expire)
+	id, err := authProvider.AddAppPassword(username, hash, role, expire)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return pw, nil
+	return id, pw, nil
 }
 
 func RevokeAppPassword(username, id string) error {

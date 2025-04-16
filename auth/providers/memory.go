@@ -17,24 +17,41 @@ func NewMemoryAuthProvider(config json.RawMessage) AuthProvider {
 	}
 }
 
-func (a *MemoryAuthProvide) AuthenticateUser(username, password string) bool {
+func (a *MemoryAuthProvide) AuthenticateUser(username, password string) *UserView {
 	if user, ok := a.users[username]; ok {
-		return VerifyPassword(user.Hash, password)
+		if VerifyPassword(user.Hash, password) {
+			return &UserView{
+				Username: user.Username,
+				Role:     user.Role,
+			}
+		}
 	}
-	return false
+	return nil
 }
 
-func (a *MemoryAuthProvide) AuthenticateWithAppPassword(username, password string) bool {
+func (a *MemoryAuthProvide) AuthenticateWithAppPassword(username, password string) *UserView {
 	if user, ok := a.users[username]; ok {
 		for _, appPassword := range user.AppPasswords {
 			if VerifyPassword(appPassword.Hash, password) && !appPassword.Revoked {
 				if appPassword.ExpiresAt.IsZero() || time.Now().Before(appPassword.ExpiresAt) {
-					return true
+					return &UserView{
+						Username: user.Username,
+						Role:     user.Role,
+						AppPasswords: []AppPasswordView{
+							{
+								ID:        appPassword.ID,
+								CreatedAt: appPassword.CreatedAt,
+								ExpiresAt: appPassword.ExpiresAt,
+								Role:      appPassword.Role,
+								Revoked:   appPassword.Revoked,
+							},
+						},
+					}
 				}
 			}
 		}
 	}
-	return false
+	return nil
 }
 
 func (a *MemoryAuthProvide) AddUser(username, hash, role string) error {
@@ -113,19 +130,20 @@ func (a *MemoryAuthProvide) SetRole(username, role string) error {
 	return fmt.Errorf("user does not exist")
 }
 
-func (a *MemoryAuthProvide) AddAppPassword(username, hash string, expire int) error {
+func (a *MemoryAuthProvide) AddAppPassword(username, hash, role string, expire int) (string, error) {
 	if user, ok := a.users[username]; ok {
 		appPassword := AppPassword{
 			ID:        GenerateUniqueID(), // Implement a function to generate unique IDs
 			Hash:      hash,
 			ExpiresAt: time.Now().Add(time.Duration(expire) * time.Hour),
 			CreatedAt: time.Now(),
+			Role:      role,
 			Revoked:   false,
 		}
 		user.AppPasswords = append(user.AppPasswords, appPassword)
-		return nil
+		return appPassword.ID, nil
 	}
-	return fmt.Errorf("user does not exist")
+	return "", fmt.Errorf("user does not exist")
 }
 
 func (a *MemoryAuthProvide) RevokeAppPassword(username, id string) error {
