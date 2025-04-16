@@ -244,10 +244,21 @@ func (a *FileAuthProvider) GetUser(username string) (UserView, error) {
 	defer a.userStoreMux.Unlock()
 	for i, user := range a.users.Users {
 		if user.Username == username {
-			return UserView{
-				Username: a.users.Users[i].Username,
-				Role:     a.users.Users[i].Role,
-			}, nil
+			userView := UserView{
+				Username:     a.users.Users[i].Username,
+				Role:         a.users.Users[i].Role,
+				AppPasswords: []AppPasswordView{},
+			}
+			for _, appPassword := range a.users.Users[i].AppPasswords {
+				userView.AppPasswords = append(userView.AppPasswords, AppPasswordView{
+					ID:        appPassword.ID,
+					CreatedAt: appPassword.CreatedAt,
+					ExpiresAt: appPassword.ExpiresAt,
+					Role:      appPassword.Role,
+					Revoked:   appPassword.Revoked,
+				})
+			}
+			return userView, nil
 		}
 	}
 	return UserView{}, fmt.Errorf("user not found")
@@ -343,7 +354,7 @@ func (a *FileAuthProvider) RevokeAppPassword(username, id string) error {
 	return fmt.Errorf("user or app password not found")
 }
 
-func (a *FileAuthProvider) ListAppPasswordsIds(username string) ([]string, error) {
+func (a *FileAuthProvider) GetAppPasswords(username string) ([]AppPasswordView, error) {
 	err := a.LoadUsers()
 	if err != nil {
 		return nil, err
@@ -352,11 +363,17 @@ func (a *FileAuthProvider) ListAppPasswordsIds(username string) ([]string, error
 	defer a.userStoreMux.Unlock()
 	for i, user := range a.users.Users {
 		if user.Username == username {
-			var ids []string
+			appPasswords := make([]AppPasswordView, 0, len(user.AppPasswords))
 			for _, appPassword := range a.users.Users[i].AppPasswords {
-				ids = append(ids, appPassword.ID)
+				appPasswords = append(appPasswords, AppPasswordView{
+					ID:        appPassword.ID,
+					CreatedAt: appPassword.CreatedAt,
+					ExpiresAt: appPassword.ExpiresAt,
+					Role:      appPassword.Role,
+					Revoked:   appPassword.Revoked,
+				})
 			}
-			return ids, nil
+			return appPasswords, nil
 		}
 	}
 	return nil, fmt.Errorf("user not found")

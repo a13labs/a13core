@@ -77,3 +77,15 @@ func SetRole(username, role string) error {
 func GenerateAppPassword(name, username, role string, expire int) (string, string, error) {
 	return providers.GenerateAppPassword(name, username, role, expire)
 }
+
+func RevokeAppPassword(username, id string) error {
+	return providers.RevokeAppPassword(username, id)
+}
+
+func GetAppPasswords(username string) ([]providers.AppPasswordView, error) {
+	return providers.GetAppPasswords(username)
+}
+
+func CleanUpRevokedExpiredAppPasswords() error {
+	return providers.CleanUpRevokedExpiredAppPasswords()
+}

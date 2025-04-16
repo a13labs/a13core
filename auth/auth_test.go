@@ -216,6 +216,17 @@ func TestMemoryProviderGenerateAppPassword(t *testing.T) {
 	if userView.AppPasswords[0].Role != "admin" {
 		t.Errorf("Expected app password role to be 'admin', got '%s'", userView.AppPasswords[0].Role)
 	}
+
+	appPasswords, err := GetAppPasswords("testuser")
+	if err != nil {
+		t.Fatalf("Failed to get app passwords: %v", err)
+	}
+	if len(appPasswords) != 1 {
+		t.Fatalf("Expected 1 app password, got %d", len(appPasswords))
+	}
+	if appPasswords[0].ID != id {
+		t.Errorf("Expected app password ID to match, got '%s'", appPasswords[0].ID)
+	}
 }
 
 func TestFileProviderInitializeAuth(t *testing.T) {
@@ -392,5 +403,16 @@ func TestFileProviderGenerateAppPassword(t *testing.T) {
 
 	if userView.AppPasswords[0].Role != "admin" {
 		t.Errorf("Expected app password role to be 'admin', got '%s'", userView.AppPasswords[0].Role)
+	}
+
+	appPasswords, err := GetAppPasswords("testuser")
+	if err != nil {
+		t.Fatalf("Failed to get app passwords: %v", err)
+	}
+	if len(appPasswords) != 1 {
+		t.Fatalf("Expected 1 app password, got %d", len(appPasswords))
+	}
+	if appPasswords[0].ID != id {
+		t.Errorf("Expected app password ID to match, got '%s'", appPasswords[0].ID)
 	}
 }

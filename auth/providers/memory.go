@@ -114,10 +114,21 @@ func (a *MemoryAuthProvide) GetRole(username string) (string, error) {
 
 func (a *MemoryAuthProvide) GetUser(username string) (UserView, error) {
 	if user, ok := a.users[username]; ok {
-		return UserView{
-			Username: user.Username,
-			Role:     user.Role,
-		}, nil
+		userView := UserView{
+			Username:     user.Username,
+			Role:         user.Role,
+			AppPasswords: make([]AppPasswordView, 0, len(user.AppPasswords)),
+		}
+		for _, appPassword := range user.AppPasswords {
+			userView.AppPasswords = append(userView.AppPasswords, AppPasswordView{
+				ID:        appPassword.ID,
+				CreatedAt: appPassword.CreatedAt,
+				ExpiresAt: appPassword.ExpiresAt,
+				Role:      appPassword.Role,
+				Revoked:   appPassword.Revoked,
+			})
+		}
+		return userView, nil
 	}
 	return UserView{}, fmt.Errorf("user does not exist")
 }
@@ -158,13 +169,19 @@ func (a *MemoryAuthProvide) RevokeAppPassword(username, id string) error {
 	return fmt.Errorf("user or app password does not exist")
 }
 
-func (a *MemoryAuthProvide) ListAppPasswordsIds(username string) ([]string, error) {
+func (a *MemoryAuthProvide) GetAppPasswords(username string) ([]AppPasswordView, error) {
 	if user, ok := a.users[username]; ok {
-		ids := make([]string, 0, len(user.AppPasswords))
+		appPasswords := make([]AppPasswordView, 0, len(user.AppPasswords))
 		for _, appPassword := range user.AppPasswords {
-			ids = append(ids, appPassword.ID)
+			appPasswords = append(appPasswords, AppPasswordView{
+				ID:        appPassword.ID,
+				CreatedAt: appPassword.CreatedAt,
+				ExpiresAt: appPassword.ExpiresAt,
+				Role:      appPassword.Role,
+				Revoked:   appPassword.Revoked,
+			})
 		}
-		return ids, nil
+		return appPasswords, nil
 	}
 	return nil, fmt.Errorf("user does not exist")
 }

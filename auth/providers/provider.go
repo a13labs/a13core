@@ -103,8 +103,8 @@ func RevokeAppPassword(username, id string) error {
 	return authProvider.RevokeAppPassword(username, id)
 }
 
-func ListAppPasswordsIds(username string) ([]string, error) {
-	return authProvider.ListAppPasswordsIds(username)
+func GetAppPasswords(username string) ([]AppPasswordView, error) {
+	return authProvider.GetAppPasswords(username)
 }
 
 func CleanUpRevokedExpiredAppPasswords() error {
