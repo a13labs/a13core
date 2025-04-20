@@ -3,19 +3,25 @@ package providers
 import (
 	"encoding/json"
 	"fmt"
+
+	fileProvider "github.com/a13labs/a13core/auth/providers/file"
+	"github.com/a13labs/a13core/auth/providers/internal"
+	ldapProvider "github.com/a13labs/a13core/auth/providers/ldap"
+	memProvider "github.com/a13labs/a13core/auth/providers/memory"
+	providerTypes "github.com/a13labs/a13core/auth/providers/types"
 )
 
-var authProvider AuthProvider
+var authProvider providerTypes.AuthProvider
 
-func SetAuthProvider(factory AuthProviderFactory, config json.RawMessage) {
+func SetAuthProvider(factory providerTypes.AuthProviderFactory, config json.RawMessage) {
 	authProvider = factory(config)
 }
 
-func GetAuthProvider() AuthProvider {
+func GetAuthProvider() providerTypes.AuthProvider {
 	return authProvider
 }
 
-func AuthenticateUser(username, password string) *UserView {
+func AuthenticateUser(username, password string) *providerTypes.UserView {
 	user := authProvider.AuthenticateUser(username, password)
 	if user == nil {
 		return authProvider.AuthenticateWithAppPassword(username, password)
@@ -24,7 +30,7 @@ func AuthenticateUser(username, password string) *UserView {
 }
 
 func AddUser(username, password, role string) error {
-	hash, err := HashPassword(password)
+	hash, err := internal.HashPassword(password)
 	if err != nil {
 		return fmt.Errorf("failed to hash password: %v", err)
 	}
@@ -35,12 +41,12 @@ func RemoveUser(username string) error {
 	return authProvider.RemoveUser(username)
 }
 
-func GetUsers() ([]UserView, error) {
+func GetUsers() ([]providerTypes.UserView, error) {
 	return authProvider.GetUsers()
 }
 
 func ChangePassword(username, password string) error {
-	hash, err := HashPassword(password)
+	hash, err := internal.HashPassword(password)
 	if err != nil {
 		return fmt.Errorf("failed to hash password: %v", err)
 	}
@@ -58,9 +64,11 @@ func GetRole(username string) (string, error) {
 func InitializeAuthProvider(provider string, config json.RawMessage) error {
 	switch provider {
 	case "file":
-		SetAuthProvider(NewFileAuthProvider, config)
+		SetAuthProvider(fileProvider.FromConfig, config)
 	case "memory":
-		SetAuthProvider(NewMemoryAuthProvider, config)
+		SetAuthProvider(memProvider.FromConfig, config)
+	case "ldap":
+		SetAuthProvider(ldapProvider.FromConfig, config)
 	default:
 		return fmt.Errorf("unsupported auth provider")
 	}
@@ -71,7 +79,7 @@ func LoadUsers() error {
 	return authProvider.LoadUsers()
 }
 
-func GetUser(username string) (UserView, error) {
+func GetUser(username string) (providerTypes.UserView, error) {
 	return authProvider.GetUser(username)
 }
 
@@ -80,13 +88,13 @@ func SetRole(username, role string) error {
 }
 
 func GenerateAppPassword(name string, username, role string, expire int) (string, string, error) {
-	pw, err := GenerateRandomPassword()
+	pw, err := internal.GenerateRandomPassword()
 
 	if err != nil {
 		return "", "", err
 	}
 
-	hash, err := HashPassword(pw)
+	hash, err := internal.HashPassword(pw)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to hash password: %v", err)
 	}
@@ -103,7 +111,7 @@ func RevokeAppPassword(username, id string) error {
 	return authProvider.RevokeAppPassword(username, id)
 }
 
-func GetAppPasswords(username string) ([]AppPasswordView, error) {
+func GetAppPasswords(username string) ([]providerTypes.AppPasswordView, error) {
 	return authProvider.GetAppPasswords(username)
 }
 

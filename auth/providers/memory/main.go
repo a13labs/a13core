@@ -4,23 +4,26 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/a13labs/a13core/auth/providers/internal"
+	providerTypes "github.com/a13labs/a13core/auth/providers/types"
 )
 
 type MemoryAuthProvide struct {
-	AuthProvider
-	users map[string]*User
+	providerTypes.AuthProvider
+	users map[string]*providerTypes.User
 }
 
-func NewMemoryAuthProvider(config json.RawMessage) AuthProvider {
+func FromConfig(config json.RawMessage) providerTypes.AuthProvider {
 	return &MemoryAuthProvide{
-		users: make(map[string]*User),
+		users: make(map[string]*providerTypes.User),
 	}
 }
 
-func (a *MemoryAuthProvide) AuthenticateUser(username, password string) *UserView {
+func (a *MemoryAuthProvide) AuthenticateUser(username, password string) *providerTypes.UserView {
 	if user, ok := a.users[username]; ok {
-		if VerifyPassword(user.Hash, password) {
-			return &UserView{
+		if internal.VerifyPassword(user.Hash, password) {
+			return &providerTypes.UserView{
 				Username: user.Username,
 				Role:     user.Role,
 			}
@@ -29,15 +32,15 @@ func (a *MemoryAuthProvide) AuthenticateUser(username, password string) *UserVie
 	return nil
 }
 
-func (a *MemoryAuthProvide) AuthenticateWithAppPassword(username, password string) *UserView {
+func (a *MemoryAuthProvide) AuthenticateWithAppPassword(username, password string) *providerTypes.UserView {
 	if user, ok := a.users[username]; ok {
 		for _, appPassword := range user.AppPasswords {
-			if VerifyPassword(appPassword.Hash, password) && !appPassword.Revoked {
+			if internal.VerifyPassword(appPassword.Hash, password) && !appPassword.Revoked {
 				if appPassword.ExpiresAt.IsZero() || time.Now().Before(appPassword.ExpiresAt) {
-					return &UserView{
+					return &providerTypes.UserView{
 						Username: user.Username,
 						Role:     user.Role,
-						AppPasswords: []AppPasswordView{
+						AppPasswords: []providerTypes.AppPasswordView{
 							{
 								ID:        appPassword.ID,
 								CreatedAt: appPassword.CreatedAt,
@@ -60,11 +63,11 @@ func (a *MemoryAuthProvide) AddUser(username, hash, role string) error {
 		return fmt.Errorf("user already exists")
 	}
 
-	a.users[username] = &User{
+	a.users[username] = &providerTypes.User{
 		Username:     username,
 		Hash:         hash,
 		Role:         role,
-		AppPasswords: []AppPassword{},
+		AppPasswords: []providerTypes.AppPassword{},
 	}
 
 	return nil
@@ -80,17 +83,17 @@ func (a *MemoryAuthProvide) RemoveUser(username string) error {
 	return nil
 }
 
-func (a *MemoryAuthProvide) GetUsers() ([]UserView, error) {
-	users := make([]UserView, 0, len(a.users))
+func (a *MemoryAuthProvide) GetUsers() ([]providerTypes.UserView, error) {
+	users := make([]providerTypes.UserView, 0, len(a.users))
 	i := 0
 	for user := range a.users {
-		users = append(users, UserView{
+		users = append(users, providerTypes.UserView{
 			Username:     user,
 			Role:         a.users[user].Role,
-			AppPasswords: make([]AppPasswordView, 0, len(a.users[user].AppPasswords)),
+			AppPasswords: make([]providerTypes.AppPasswordView, 0, len(a.users[user].AppPasswords)),
 		})
 		for _, appPassword := range a.users[user].AppPasswords {
-			users[i].AppPasswords = append(users[i].AppPasswords, AppPasswordView{
+			users[i].AppPasswords = append(users[i].AppPasswords, providerTypes.AppPasswordView{
 				ID:        appPassword.ID,
 				CreatedAt: appPassword.CreatedAt,
 				ExpiresAt: appPassword.ExpiresAt,
@@ -112,7 +115,7 @@ func (a *MemoryAuthProvide) ChangePassword(username, hash string) error {
 }
 
 func (a *MemoryAuthProvide) DropUsers() error {
-	a.users = make(map[string]*User)
+	a.users = make(map[string]*providerTypes.User)
 	return nil
 }
 
@@ -127,15 +130,15 @@ func (a *MemoryAuthProvide) GetRole(username string) (string, error) {
 	return "", fmt.Errorf("user does not exist")
 }
 
-func (a *MemoryAuthProvide) GetUser(username string) (UserView, error) {
+func (a *MemoryAuthProvide) GetUser(username string) (providerTypes.UserView, error) {
 	if user, ok := a.users[username]; ok {
-		userView := UserView{
+		userView := providerTypes.UserView{
 			Username:     user.Username,
 			Role:         user.Role,
-			AppPasswords: make([]AppPasswordView, 0, len(user.AppPasswords)),
+			AppPasswords: make([]providerTypes.AppPasswordView, 0, len(user.AppPasswords)),
 		}
 		for _, appPassword := range user.AppPasswords {
-			userView.AppPasswords = append(userView.AppPasswords, AppPasswordView{
+			userView.AppPasswords = append(userView.AppPasswords, providerTypes.AppPasswordView{
 				ID:        appPassword.ID,
 				CreatedAt: appPassword.CreatedAt,
 				ExpiresAt: appPassword.ExpiresAt,
@@ -145,7 +148,7 @@ func (a *MemoryAuthProvide) GetUser(username string) (UserView, error) {
 		}
 		return userView, nil
 	}
-	return UserView{}, fmt.Errorf("user does not exist")
+	return providerTypes.UserView{}, fmt.Errorf("user does not exist")
 }
 
 func (a *MemoryAuthProvide) SetRole(username, role string) error {
@@ -158,8 +161,8 @@ func (a *MemoryAuthProvide) SetRole(username, role string) error {
 
 func (a *MemoryAuthProvide) AddAppPassword(username, hash, role string, expire int) (string, error) {
 	if user, ok := a.users[username]; ok {
-		appPassword := AppPassword{
-			ID:        GenerateUniqueID(), // Implement a function to generate unique IDs
+		appPassword := providerTypes.AppPassword{
+			ID:        internal.GenerateUniqueID(), // Implement a function to generate unique IDs
 			Hash:      hash,
 			ExpiresAt: time.Now().Add(time.Duration(expire) * time.Hour),
 			CreatedAt: time.Now(),
@@ -184,11 +187,11 @@ func (a *MemoryAuthProvide) RevokeAppPassword(username, id string) error {
 	return fmt.Errorf("user or app password does not exist")
 }
 
-func (a *MemoryAuthProvide) GetAppPasswords(username string) ([]AppPasswordView, error) {
+func (a *MemoryAuthProvide) GetAppPasswords(username string) ([]providerTypes.AppPasswordView, error) {
 	if user, ok := a.users[username]; ok {
-		appPasswords := make([]AppPasswordView, 0, len(user.AppPasswords))
+		appPasswords := make([]providerTypes.AppPasswordView, 0, len(user.AppPasswords))
 		for _, appPassword := range user.AppPasswords {
-			appPasswords = append(appPasswords, AppPasswordView{
+			appPasswords = append(appPasswords, providerTypes.AppPasswordView{
 				ID:        appPassword.ID,
 				CreatedAt: appPassword.CreatedAt,
 				ExpiresAt: appPassword.ExpiresAt,

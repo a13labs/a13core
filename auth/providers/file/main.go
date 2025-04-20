@@ -1,4 +1,4 @@
-package providers
+package file
 
 import (
 	"encoding/json"
@@ -7,6 +7,9 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/a13labs/a13core/auth/providers/internal"
+	providerTypes "github.com/a13labs/a13core/auth/providers/types"
 )
 
 type FileAuthProviderConfig struct {
@@ -14,13 +17,13 @@ type FileAuthProviderConfig struct {
 }
 
 type FileAuthProvider struct {
-	AuthProvider
+	providerTypes.AuthProvider
 	userStoreMux sync.Mutex
-	users        Users
+	users        providerTypes.Users
 	config       FileAuthProviderConfig
 }
 
-func NewFileAuthProvider(config json.RawMessage) AuthProvider {
+func FromConfig(config json.RawMessage) providerTypes.AuthProvider {
 
 	var c FileAuthProviderConfig
 	if err := json.Unmarshal([]byte(config), &c); err != nil {
@@ -29,15 +32,15 @@ func NewFileAuthProvider(config json.RawMessage) AuthProvider {
 	return &FileAuthProvider{config: c}
 }
 
-func (a *FileAuthProvider) AuthenticateUser(username, password string) *UserView {
+func (a *FileAuthProvider) AuthenticateUser(username, password string) *providerTypes.UserView {
 	err := a.LoadUsers()
 	if err != nil {
 		return nil
 	}
 
 	for _, user := range a.users.Users {
-		if user.Username == username && VerifyPassword(user.Hash, password) {
-			return &UserView{
+		if user.Username == username && internal.VerifyPassword(user.Hash, password) {
+			return &providerTypes.UserView{
 				Username: user.Username,
 				Role:     user.Role,
 			}
@@ -46,7 +49,7 @@ func (a *FileAuthProvider) AuthenticateUser(username, password string) *UserView
 	return nil
 }
 
-func (a *FileAuthProvider) AuthenticateWithAppPassword(username, password string) *UserView {
+func (a *FileAuthProvider) AuthenticateWithAppPassword(username, password string) *providerTypes.UserView {
 	err := a.LoadUsers()
 	if err != nil {
 		return nil
@@ -54,12 +57,12 @@ func (a *FileAuthProvider) AuthenticateWithAppPassword(username, password string
 	for _, user := range a.users.Users {
 		if user.Username == username {
 			for _, appPassword := range user.AppPasswords {
-				if VerifyPassword(appPassword.Hash, password) && !appPassword.Revoked {
+				if internal.VerifyPassword(appPassword.Hash, password) && !appPassword.Revoked {
 					if appPassword.ExpiresAt.IsZero() || time.Now().Before(appPassword.ExpiresAt) {
-						return &UserView{
+						return &providerTypes.UserView{
 							Username: user.Username,
 							Role:     user.Role,
-							AppPasswords: []AppPasswordView{
+							AppPasswords: []providerTypes.AppPasswordView{
 								{
 									ID:        appPassword.ID,
 									CreatedAt: appPassword.CreatedAt,
@@ -90,11 +93,11 @@ func (a *FileAuthProvider) AddUser(username, hash, role string) error {
 			return fmt.Errorf("user already exists")
 		}
 	}
-	a.users.Users = append(a.users.Users, User{
+	a.users.Users = append(a.users.Users, providerTypes.User{
 		Username:     username,
 		Hash:         hash,
 		Role:         role,
-		AppPasswords: []AppPassword{},
+		AppPasswords: []providerTypes.AppPassword{},
 	})
 	data, err := json.MarshalIndent(a.users, "", "  ")
 	if err != nil {
@@ -135,20 +138,20 @@ func (a *FileAuthProvider) RemoveUser(username string) error {
 	return fmt.Errorf("user not found")
 }
 
-func (a *FileAuthProvider) GetUsers() ([]UserView, error) {
+func (a *FileAuthProvider) GetUsers() ([]providerTypes.UserView, error) {
 	err := a.LoadUsers()
 	if err != nil {
 		return nil, err
 	}
-	users := make([]UserView, 0, len(a.users.Users))
+	users := make([]providerTypes.UserView, 0, len(a.users.Users))
 	for i, user := range a.users.Users {
-		users = append(users, UserView{
+		users = append(users, providerTypes.UserView{
 			Username:     user.Username,
 			Role:         user.Role,
-			AppPasswords: make([]AppPasswordView, 0, len(user.AppPasswords)),
+			AppPasswords: make([]providerTypes.AppPasswordView, 0, len(user.AppPasswords)),
 		})
 		for _, appPassword := range user.AppPasswords {
-			users[i].AppPasswords = append(users[i].AppPasswords, AppPasswordView{
+			users[i].AppPasswords = append(users[i].AppPasswords, providerTypes.AppPasswordView{
 				ID:        appPassword.ID,
 				CreatedAt: appPassword.CreatedAt,
 				ExpiresAt: appPassword.ExpiresAt,
@@ -248,22 +251,22 @@ func (a *FileAuthProvider) GetRole(username string) (string, error) {
 	return "", fmt.Errorf("user not found")
 }
 
-func (a *FileAuthProvider) GetUser(username string) (UserView, error) {
+func (a *FileAuthProvider) GetUser(username string) (providerTypes.UserView, error) {
 	err := a.LoadUsers()
 	if err != nil {
-		return UserView{}, err
+		return providerTypes.UserView{}, err
 	}
 	a.userStoreMux.Lock()
 	defer a.userStoreMux.Unlock()
 	for i, user := range a.users.Users {
 		if user.Username == username {
-			userView := UserView{
+			userView := providerTypes.UserView{
 				Username:     a.users.Users[i].Username,
 				Role:         a.users.Users[i].Role,
-				AppPasswords: []AppPasswordView{},
+				AppPasswords: []providerTypes.AppPasswordView{},
 			}
 			for _, appPassword := range a.users.Users[i].AppPasswords {
-				userView.AppPasswords = append(userView.AppPasswords, AppPasswordView{
+				userView.AppPasswords = append(userView.AppPasswords, providerTypes.AppPasswordView{
 					ID:        appPassword.ID,
 					CreatedAt: appPassword.CreatedAt,
 					ExpiresAt: appPassword.ExpiresAt,
@@ -274,7 +277,7 @@ func (a *FileAuthProvider) GetUser(username string) (UserView, error) {
 			return userView, nil
 		}
 	}
-	return UserView{}, fmt.Errorf("user not found")
+	return providerTypes.UserView{}, fmt.Errorf("user not found")
 }
 
 func (a *FileAuthProvider) SetRole(username, role string) error {
@@ -312,8 +315,8 @@ func (a *FileAuthProvider) AddAppPassword(username, hash, role string, expire in
 	defer a.userStoreMux.Unlock()
 	for i, user := range a.users.Users {
 		if user.Username == username {
-			appPassword := AppPassword{
-				ID:        GenerateUniqueID(), // Implement a function to generate unique IDs
+			appPassword := providerTypes.AppPassword{
+				ID:        internal.GenerateUniqueID(), // Implement a function to generate unique IDs
 				Hash:      hash,
 				CreatedAt: time.Now(),
 				ExpiresAt: time.Now().Add(time.Duration(expire) * time.Hour),
@@ -367,7 +370,7 @@ func (a *FileAuthProvider) RevokeAppPassword(username, id string) error {
 	return fmt.Errorf("user or app password not found")
 }
 
-func (a *FileAuthProvider) GetAppPasswords(username string) ([]AppPasswordView, error) {
+func (a *FileAuthProvider) GetAppPasswords(username string) ([]providerTypes.AppPasswordView, error) {
 	err := a.LoadUsers()
 	if err != nil {
 		return nil, err
@@ -376,9 +379,9 @@ func (a *FileAuthProvider) GetAppPasswords(username string) ([]AppPasswordView, 
 	defer a.userStoreMux.Unlock()
 	for i, user := range a.users.Users {
 		if user.Username == username {
-			appPasswords := make([]AppPasswordView, 0, len(user.AppPasswords))
+			appPasswords := make([]providerTypes.AppPasswordView, 0, len(user.AppPasswords))
 			for _, appPassword := range a.users.Users[i].AppPasswords {
-				appPasswords = append(appPasswords, AppPasswordView{
+				appPasswords = append(appPasswords, providerTypes.AppPasswordView{
 					ID:        appPassword.ID,
 					CreatedAt: appPassword.CreatedAt,
 					ExpiresAt: appPassword.ExpiresAt,
@@ -400,7 +403,7 @@ func (a *FileAuthProvider) CleanUpRevokedExpiredAppPasswords() error {
 	a.userStoreMux.Lock()
 	defer a.userStoreMux.Unlock()
 	for i := range a.users.Users {
-		var validAppPasswords []AppPassword
+		var validAppPasswords []providerTypes.AppPassword
 		for _, appPassword := range a.users.Users[i].AppPasswords {
 			if !appPassword.Revoked && (appPassword.ExpiresAt.IsZero() || time.Now().Before(appPassword.ExpiresAt)) {
 				validAppPasswords = append(validAppPasswords, appPassword)

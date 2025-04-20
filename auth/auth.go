@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/a13labs/a13core/auth/providers"
+	providerTypes "github.com/a13labs/a13core/auth/providers/types"
 )
 
 type AuthConfig struct {
@@ -42,7 +43,7 @@ func GetRole(username string) (string, error) {
 	return providers.GetRole(username)
 }
 
-func CheckCredentials(username, password string) *providers.UserView {
+func CheckCredentials(username, password string) *providerTypes.UserView {
 	return providers.AuthenticateUser(username, password)
 }
 
@@ -54,7 +55,7 @@ func RemoveUser(username string) error {
 	return providers.RemoveUser(username)
 }
 
-func GetUsers() ([]providers.UserView, error) {
+func GetUsers() ([]providerTypes.UserView, error) {
 	return providers.GetUsers()
 }
 
@@ -66,7 +67,7 @@ func DropUsers() error {
 	return providers.DropUsers()
 }
 
-func GetUser(username string) (providers.UserView, error) {
+func GetUser(username string) (providerTypes.UserView, error) {
 	return providers.GetUser(username)
 }
 
@@ -82,7 +83,7 @@ func RevokeAppPassword(username, id string) error {
 	return providers.RevokeAppPassword(username, id)
 }
 
-func GetAppPasswords(username string) ([]providers.AppPasswordView, error) {
+func GetAppPasswords(username string) ([]providerTypes.AppPasswordView, error) {
 	return providers.GetAppPasswords(username)
 }
 

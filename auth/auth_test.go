@@ -13,23 +13,6 @@ func setupMemoryProvider() {
 	providers.InitializeAuthProvider("memory", json.RawMessage(providerSettings))
 }
 
-func setupFileProvider() {
-	providerSettings := `{"file_path": "test_users.json"}`
-	providers.InitializeAuthProvider("file", json.RawMessage(providerSettings))
-}
-
-func cleanUpFileProvider() {
-	// Clean up the test file after tests if the file exists
-	if _, err := os.Stat("test_users.json"); os.IsNotExist(err) {
-		return
-	}
-	// Remove the test file
-	err := os.Remove("test_users.json")
-	if err != nil {
-		panic(err)
-	}
-}
-
 func TestMemoryProviderInitializeAuth(t *testing.T) {
 	setupMemoryProvider()
 
@@ -229,6 +212,25 @@ func TestMemoryProviderGenerateAppPassword(t *testing.T) {
 	}
 }
 
+// File provider tests
+
+func setupFileProvider() {
+	providerSettings := `{"file_path": "test_users.json"}`
+	providers.InitializeAuthProvider("file", json.RawMessage(providerSettings))
+}
+
+func cleanUpFileProvider() {
+	// Clean up the test file after tests if the file exists
+	if _, err := os.Stat("test_users.json"); os.IsNotExist(err) {
+		return
+	}
+	// Remove the test file
+	err := os.Remove("test_users.json")
+	if err != nil {
+		panic(err)
+	}
+}
+
 func TestFileProviderInitializeAuth(t *testing.T) {
 	setupFileProvider()
 	defer cleanUpFileProvider()
@@ -414,5 +416,105 @@ func TestFileProviderGenerateAppPassword(t *testing.T) {
 	}
 	if appPasswords[0].ID != id {
 		t.Errorf("Expected app password ID to match, got '%s'", appPasswords[0].ID)
+	}
+}
+
+// LDAP provider tests - For this test to work, you need to have a running LDAP server with the specified settings.
+// You can use a local LDAP server like Glauth for testing purposes.
+
+func setupLDAPProvider() {
+	providerSettings := `{
+		"host": "localhost",
+		"port": 3894,
+		"use_ssl": true,
+		"skip_tls": true,
+		"insecure": true,
+		"base_dn": "dc=glauth,dc=com",
+		"bind_dn": "cn=serviceuser,dc=glauth,dc=com",
+		"bind_password": "mysecret"
+	}`
+	providers.InitializeAuthProvider("ldap", json.RawMessage(providerSettings))
+}
+
+func TestLDAPProviderInitializeAuth(t *testing.T) {
+	setupLDAPProvider()
+
+	data := json.RawMessage(`{
+		"provider": "ldap",
+		"secret_key": "test_secret",
+		"expiration_time": 48,
+		"settings": {
+			"host": "localhost",
+			"port": 3894,
+			"use_ssl": true,
+			"skip_tls": true,
+			"insecure": true,
+			"base_dn": "dc=glauth,dc=com",
+			"bind_dn": "cn=serviceuser,dc=glauth,dc=com",
+			"bind_password": "mysecret"
+		}
+	}`)
+
+	err := InitializeAuth(data)
+	if err != nil {
+		t.Fatalf("Failed to initialize auth: %v", err)
+	}
+
+	if authConfig.Provider != "ldap" {
+		t.Errorf("Expected provider to be 'ldap', got '%s'", authConfig.Provider)
+	}
+
+	if authConfig.SecretKey != "test_secret" {
+		t.Errorf("Expected secret key to be 'test_secret', got '%s'", authConfig.SecretKey)
+	}
+
+	if authConfig.ExpirationTime != 48 {
+		t.Errorf("Expected expiration time to be 48, got %d", authConfig.ExpirationTime)
+	}
+}
+
+func TestLDAPProviderCheckCredentials(t *testing.T) {
+	setupLDAPProvider()
+
+	// Assuming the LDAP provider has a user "johndoe" with password "dogood"
+	userView := CheckCredentials("johndoe", "dogood")
+	if userView == nil {
+		t.Errorf("Expected credentials to be valid")
+	}
+
+	if userView.Username != "johndoe" {
+		t.Errorf("Expected username to be 'johndoe', got '%s'", userView.Username)
+	}
+
+	if userView.Role == "" {
+		t.Errorf("Expected role to be non-empty")
+	}
+
+	if CheckCredentials("testuser", "wrongpassword") != nil {
+		t.Errorf("Expected credentials to be invalid")
+	}
+
+	// Test with app password
+	userView = CheckCredentials("uberhackers", "dogood")
+	if userView.Username != "uberhackers" {
+		t.Errorf("Expected username to be 'uberhackers', got '%s'", userView.Username)
+	}
+
+	if userView.Role == "" {
+		t.Errorf("Expected role to be non-empty")
+	}
+}
+
+func TestLDAPProviderGetRole(t *testing.T) {
+	setupLDAPProvider()
+
+	// Assuming the LDAP provider has a user "testuser" with role "admin"
+	role, err := GetRole("johndoe")
+	if err != nil {
+		t.Fatalf("Failed to get role: %v", err)
+	}
+
+	if role != "superheros" {
+		t.Errorf("Expected role to be 'admin', got '%s'", role)
 	}
 }
