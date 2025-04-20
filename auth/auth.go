@@ -16,6 +16,7 @@ type AuthConfig struct {
 }
 
 var authConfig AuthConfig
+var authLayer *providers.AuthLayer
 
 func InitializeAuth(data json.RawMessage) error {
 
@@ -36,57 +37,66 @@ func InitializeAuth(data json.RawMessage) error {
 		authConfig.ExpirationTime = 24
 	}
 
-	return providers.InitializeAuthProvider(authConfig.Provider, authConfig.Settings)
+	authLayer, err = providers.FromConfig(authConfig.Provider, authConfig.Settings)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func GetRole(username string) (string, error) {
-	return providers.GetRole(username)
+	return authLayer.GetRole(username)
 }
 
 func CheckCredentials(username, password string) *providerTypes.UserView {
-	return providers.AuthenticateUser(username, password)
+	return authLayer.AuthenticateUser(username, password)
 }
 
 func AddUser(username, password, role string) error {
-	return providers.AddUser(username, password, role)
+	return authLayer.AddUser(username, password, role)
 }
 
 func RemoveUser(username string) error {
-	return providers.RemoveUser(username)
+	return authLayer.RemoveUser(username)
 }
 
 func GetUsers() ([]providerTypes.UserView, error) {
-	return providers.GetUsers()
+	return authLayer.GetUsers()
 }
 
 func ChangePassword(username, password string) error {
-	return providers.ChangePassword(username, password)
+	return authLayer.ChangePassword(username, password)
 }
 
 func DropUsers() error {
-	return providers.DropUsers()
+	return authLayer.DropUsers()
 }
 
 func GetUser(username string) (providerTypes.UserView, error) {
-	return providers.GetUser(username)
+	return authLayer.GetUser(username)
 }
 
 func SetRole(username, role string) error {
-	return providers.SetRole(username, role)
+	return authLayer.SetRole(username, role)
 }
 
 func GenerateAppPassword(name, username, role string, expire int) (string, string, error) {
-	return providers.GenerateAppPassword(name, username, role, expire)
+	return authLayer.GenerateAppPassword(name, username, role, expire)
 }
 
 func RevokeAppPassword(username, id string) error {
-	return providers.RevokeAppPassword(username, id)
+	return authLayer.RevokeAppPassword(username, id)
 }
 
 func GetAppPasswords(username string) ([]providerTypes.AppPasswordView, error) {
-	return providers.GetAppPasswords(username)
+	return authLayer.GetAppPasswords(username)
 }
 
 func CleanUpRevokedExpiredAppPasswords() error {
-	return providers.CleanUpRevokedExpiredAppPasswords()
+	return authLayer.CleanUpRevokedExpiredAppPasswords()
+}
+
+func SupportUserManagement() bool {
+	return authLayer.SupportUserManagement()
 }

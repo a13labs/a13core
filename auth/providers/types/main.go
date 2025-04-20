@@ -42,11 +42,14 @@ type Users struct {
 type AuthProvider interface {
 	AuthenticateUser(username, password string) *UserView
 	AuthenticateWithAppPassword(username, password string) *UserView
+}
+
+type UserManagement interface {
+	GetUser(username string) (UserView, error)
+	GetRole(username string) (string, error)
 	AddUser(username, password, role string) error
 	RemoveUser(username string) error
-	GetUser(username string) (UserView, error)
 	ChangePassword(username, password string) error
-	GetRole(username string) (string, error)
 	SetRole(username, role string) error
 	GetUsers() ([]UserView, error)
 	DropUsers() error
@@ -58,3 +61,4 @@ type AuthProvider interface {
 }
 
 type AuthProviderFactory func(config json.RawMessage) AuthProvider
+type UserManagementFactory func(config json.RawMessage) UserManagement

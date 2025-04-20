@@ -4,18 +4,9 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
-
-	"github.com/a13labs/a13core/auth/providers"
 )
 
-func setupMemoryProvider() {
-	providerSettings := `{"users": []}`
-	providers.InitializeAuthProvider("memory", json.RawMessage(providerSettings))
-}
-
-func TestMemoryProviderInitializeAuth(t *testing.T) {
-	setupMemoryProvider()
-
+func setupMemoryProvider(t *testing.T) {
 	data := json.RawMessage(`{
 		"provider": "memory",
 		"secret_key": "test_secret",
@@ -42,7 +33,7 @@ func TestMemoryProviderInitializeAuth(t *testing.T) {
 }
 
 func TestMemoryProviderAddUser(t *testing.T) {
-	setupMemoryProvider()
+	setupMemoryProvider(t)
 
 	err := AddUser("testuser", "password123", "user")
 	if err != nil {
@@ -60,7 +51,7 @@ func TestMemoryProviderAddUser(t *testing.T) {
 }
 
 func TestMemoryProviderCheckCredentials(t *testing.T) {
-	setupMemoryProvider()
+	setupMemoryProvider(t)
 
 	err := AddUser("testuser", "password123", "user")
 	if err != nil {
@@ -86,7 +77,7 @@ func TestMemoryProviderCheckCredentials(t *testing.T) {
 }
 
 func TestMemoryProviderRemoveUser(t *testing.T) {
-	setupMemoryProvider()
+	setupMemoryProvider(t)
 
 	err := AddUser("testuser", "password123", "user")
 	if err != nil {
@@ -109,7 +100,7 @@ func TestMemoryProviderRemoveUser(t *testing.T) {
 }
 
 func TestMemoryProviderChangePassword(t *testing.T) {
-	setupMemoryProvider()
+	setupMemoryProvider(t)
 
 	err := AddUser("testuser", "password123", "user")
 	if err != nil {
@@ -136,7 +127,7 @@ func TestMemoryProviderChangePassword(t *testing.T) {
 }
 
 func TestMemoryProviderSetRole(t *testing.T) {
-	setupMemoryProvider()
+	setupMemoryProvider(t)
 
 	err := AddUser("testuser", "password123", "user")
 	if err != nil {
@@ -159,7 +150,7 @@ func TestMemoryProviderSetRole(t *testing.T) {
 }
 
 func TestMemoryProviderGenerateAppPassword(t *testing.T) {
-	setupMemoryProvider()
+	setupMemoryProvider(t)
 
 	err := AddUser("testuser", "password123", "user")
 	if err != nil {
@@ -214,27 +205,7 @@ func TestMemoryProviderGenerateAppPassword(t *testing.T) {
 
 // File provider tests
 
-func setupFileProvider() {
-	providerSettings := `{"file_path": "test_users.json"}`
-	providers.InitializeAuthProvider("file", json.RawMessage(providerSettings))
-}
-
-func cleanUpFileProvider() {
-	// Clean up the test file after tests if the file exists
-	if _, err := os.Stat("test_users.json"); os.IsNotExist(err) {
-		return
-	}
-	// Remove the test file
-	err := os.Remove("test_users.json")
-	if err != nil {
-		panic(err)
-	}
-}
-
-func TestFileProviderInitializeAuth(t *testing.T) {
-	setupFileProvider()
-	defer cleanUpFileProvider()
-
+func setupFileProvider(t *testing.T) {
 	data := json.RawMessage(`{
 		"provider": "file",
 		"secret_key": "test_secret",
@@ -260,8 +231,20 @@ func TestFileProviderInitializeAuth(t *testing.T) {
 	}
 }
 
+func cleanUpFileProvider() {
+	// Clean up the test file after tests if the file exists
+	if _, err := os.Stat("test_users.json"); os.IsNotExist(err) {
+		return
+	}
+	// Remove the test file
+	err := os.Remove("test_users.json")
+	if err != nil {
+		panic(err)
+	}
+}
+
 func TestFileProviderAddUser(t *testing.T) {
-	setupFileProvider()
+	setupFileProvider(t)
 	defer cleanUpFileProvider()
 
 	err := AddUser("testuser", "password123", "user")
@@ -280,7 +263,7 @@ func TestFileProviderAddUser(t *testing.T) {
 }
 
 func TestFileProviderCheckCredentials(t *testing.T) {
-	setupFileProvider()
+	setupFileProvider(t)
 	defer cleanUpFileProvider()
 
 	err := AddUser("testuser", "password123", "user")
@@ -298,7 +281,7 @@ func TestFileProviderCheckCredentials(t *testing.T) {
 }
 
 func TestFileProviderRemoveUser(t *testing.T) {
-	setupFileProvider()
+	setupFileProvider(t)
 	defer cleanUpFileProvider()
 
 	err := AddUser("testuser", "password123", "user")
@@ -322,7 +305,7 @@ func TestFileProviderRemoveUser(t *testing.T) {
 }
 
 func TestFileProviderChangePassword(t *testing.T) {
-	setupFileProvider()
+	setupFileProvider(t)
 	defer cleanUpFileProvider()
 
 	err := AddUser("testuser", "password123", "user")
@@ -341,7 +324,7 @@ func TestFileProviderChangePassword(t *testing.T) {
 }
 
 func TestFileProviderSetRole(t *testing.T) {
-	setupFileProvider()
+	setupFileProvider(t)
 	defer cleanUpFileProvider()
 
 	err := AddUser("testuser", "password123", "user")
@@ -365,7 +348,7 @@ func TestFileProviderSetRole(t *testing.T) {
 }
 
 func TestFileProviderGenerateAppPassword(t *testing.T) {
-	setupFileProvider()
+	setupFileProvider(t)
 	defer cleanUpFileProvider()
 
 	err := AddUser("testuser", "password123", "user")
@@ -422,23 +405,7 @@ func TestFileProviderGenerateAppPassword(t *testing.T) {
 // LDAP provider tests - For this test to work, you need to have a running LDAP server with the specified settings.
 // You can use a local LDAP server like Glauth for testing purposes.
 
-func setupLDAPProvider() {
-	providerSettings := `{
-		"host": "localhost",
-		"port": 3894,
-		"use_ssl": true,
-		"skip_tls": true,
-		"insecure": true,
-		"base_dn": "dc=glauth,dc=com",
-		"bind_dn": "cn=serviceuser,dc=glauth,dc=com",
-		"bind_password": "mysecret"
-	}`
-	providers.InitializeAuthProvider("ldap", json.RawMessage(providerSettings))
-}
-
-func TestLDAPProviderInitializeAuth(t *testing.T) {
-	setupLDAPProvider()
-
+func setupLDAPProvider(t *testing.T) {
 	data := json.RawMessage(`{
 		"provider": "ldap",
 		"secret_key": "test_secret",
@@ -474,7 +441,7 @@ func TestLDAPProviderInitializeAuth(t *testing.T) {
 }
 
 func TestLDAPProviderCheckCredentials(t *testing.T) {
-	setupLDAPProvider()
+	setupLDAPProvider(t)
 
 	// Assuming the LDAP provider has a user "johndoe" with password "dogood"
 	userView := CheckCredentials("johndoe", "dogood")
@@ -502,19 +469,5 @@ func TestLDAPProviderCheckCredentials(t *testing.T) {
 
 	if userView.Role == "" {
 		t.Errorf("Expected role to be non-empty")
-	}
-}
-
-func TestLDAPProviderGetRole(t *testing.T) {
-	setupLDAPProvider()
-
-	// Assuming the LDAP provider has a user "testuser" with role "admin"
-	role, err := GetRole("johndoe")
-	if err != nil {
-		t.Fatalf("Failed to get role: %v", err)
-	}
-
-	if role != "superheros" {
-		t.Errorf("Expected role to be 'admin', got '%s'", role)
 	}
 }
