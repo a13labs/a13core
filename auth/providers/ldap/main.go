@@ -88,9 +88,6 @@ func FromConfig(config json.RawMessage) providerTypes.AuthProvider {
 	}
 }
 
-type LDAPClient struct {
-}
-
 // Connect connects to the ldap backend.
 func (a *LDAPAuth) dial() (*ldap.Conn, error) {
 	var l *ldap.Conn
