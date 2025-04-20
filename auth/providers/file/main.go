@@ -80,7 +80,7 @@ func (a *FileAuthProvider) AuthenticateWithAppPassword(username, password string
 	return nil
 }
 
-func (a *FileAuthProvider) AddUser(username, hash, role string) error {
+func (a *FileAuthProvider) AddUser(username, password, role string) error {
 	err := a.LoadUsers()
 	if err != nil {
 		return err
@@ -92,6 +92,10 @@ func (a *FileAuthProvider) AddUser(username, hash, role string) error {
 		if user.Username == username {
 			return fmt.Errorf("user already exists")
 		}
+	}
+	hash, err := internal.HashPassword(password)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %v", err)
 	}
 	a.users.Users = append(a.users.Users, providerTypes.User{
 		Username:     username,
@@ -163,7 +167,7 @@ func (a *FileAuthProvider) GetUsers() ([]providerTypes.UserView, error) {
 	return users, nil
 }
 
-func (a *FileAuthProvider) ChangePassword(username, hash string) error {
+func (a *FileAuthProvider) ChangePassword(username, password string) error {
 	err := a.LoadUsers()
 	if err != nil {
 		return err
@@ -172,6 +176,10 @@ func (a *FileAuthProvider) ChangePassword(username, hash string) error {
 	defer a.userStoreMux.Unlock()
 	for i, user := range a.users.Users {
 		if user.Username == username {
+			hash, err := internal.HashPassword(password)
+			if err != nil {
+				return fmt.Errorf("failed to hash password: %v", err)
+			}
 			a.users.Users[i].Hash = hash
 			data, err := json.MarshalIndent(a.users, "", "  ")
 			if err != nil {
@@ -306,7 +314,7 @@ func (a *FileAuthProvider) SetRole(username, role string) error {
 	return fmt.Errorf("user not found")
 }
 
-func (a *FileAuthProvider) AddAppPassword(username, hash, role string, expire int) (string, error) {
+func (a *FileAuthProvider) AddAppPassword(username, password, role string, expire int) (string, error) {
 	err := a.LoadUsers()
 	if err != nil {
 		return "", err
@@ -315,6 +323,12 @@ func (a *FileAuthProvider) AddAppPassword(username, hash, role string, expire in
 	defer a.userStoreMux.Unlock()
 	for i, user := range a.users.Users {
 		if user.Username == username {
+
+			hash, err := internal.HashPassword(password)
+			if err != nil {
+				return "", fmt.Errorf("failed to hash password: %v", err)
+			}
+
 			appPassword := providerTypes.AppPassword{
 				ID:        internal.GenerateUniqueID(), // Implement a function to generate unique IDs
 				Hash:      hash,

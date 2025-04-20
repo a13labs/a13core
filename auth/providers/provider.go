@@ -30,11 +30,7 @@ func AuthenticateUser(username, password string) *providerTypes.UserView {
 }
 
 func AddUser(username, password, role string) error {
-	hash, err := internal.HashPassword(password)
-	if err != nil {
-		return fmt.Errorf("failed to hash password: %v", err)
-	}
-	return authProvider.AddUser(username, hash, role)
+	return authProvider.AddUser(username, password, role)
 }
 
 func RemoveUser(username string) error {
@@ -46,11 +42,7 @@ func GetUsers() ([]providerTypes.UserView, error) {
 }
 
 func ChangePassword(username, password string) error {
-	hash, err := internal.HashPassword(password)
-	if err != nil {
-		return fmt.Errorf("failed to hash password: %v", err)
-	}
-	return authProvider.ChangePassword(username, hash)
+	return authProvider.ChangePassword(username, password)
 }
 
 func DropUsers() error {
@@ -88,23 +80,18 @@ func SetRole(username, role string) error {
 }
 
 func GenerateAppPassword(name string, username, role string, expire int) (string, string, error) {
-	pw, err := internal.GenerateRandomPassword()
+	password, err := internal.GenerateRandomPassword()
 
 	if err != nil {
 		return "", "", err
 	}
 
-	hash, err := internal.HashPassword(pw)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to hash password: %v", err)
-	}
-
-	id, err := authProvider.AddAppPassword(username, hash, role, expire)
+	id, err := authProvider.AddAppPassword(username, password, role, expire)
 	if err != nil {
 		return "", "", err
 	}
 
-	return id, pw, nil
+	return id, password, nil
 }
 
 func RevokeAppPassword(username, id string) error {

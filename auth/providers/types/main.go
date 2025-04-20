@@ -42,16 +42,16 @@ type Users struct {
 type AuthProvider interface {
 	AuthenticateUser(username, password string) *UserView
 	AuthenticateWithAppPassword(username, password string) *UserView
-	AddUser(username, hash, role string) error
+	AddUser(username, password, role string) error
 	RemoveUser(username string) error
 	GetUser(username string) (UserView, error)
-	ChangePassword(username, hash string) error
+	ChangePassword(username, password string) error
 	GetRole(username string) (string, error)
 	SetRole(username, role string) error
 	GetUsers() ([]UserView, error)
 	DropUsers() error
 	LoadUsers() error
-	AddAppPassword(username, hash, role string, expire int) (string, error)
+	AddAppPassword(username, password, role string, expire int) (string, error)
 	RevokeAppPassword(username, id string) error
 	GetAppPasswords(username string) ([]AppPasswordView, error)
 	CleanUpRevokedExpiredAppPasswords() error

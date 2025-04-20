@@ -57,10 +57,15 @@ func (a *MemoryAuthProvide) AuthenticateWithAppPassword(username, password strin
 	return nil
 }
 
-func (a *MemoryAuthProvide) AddUser(username, hash, role string) error {
+func (a *MemoryAuthProvide) AddUser(username, password, role string) error {
 
 	if _, ok := a.users[username]; ok {
 		return fmt.Errorf("user already exists")
+	}
+
+	hash, err := internal.HashPassword(password)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %v", err)
 	}
 
 	a.users[username] = &providerTypes.User{
@@ -106,9 +111,13 @@ func (a *MemoryAuthProvide) GetUsers() ([]providerTypes.UserView, error) {
 	return users, nil
 }
 
-func (a *MemoryAuthProvide) ChangePassword(username, hash string) error {
+func (a *MemoryAuthProvide) ChangePassword(username, password string) error {
 	if _, ok := a.users[username]; !ok {
 		return fmt.Errorf("user does not exist")
+	}
+	hash, err := internal.HashPassword(password)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %v", err)
 	}
 	a.users[username].Hash = hash
 	return nil
@@ -159,8 +168,14 @@ func (a *MemoryAuthProvide) SetRole(username, role string) error {
 	return fmt.Errorf("user does not exist")
 }
 
-func (a *MemoryAuthProvide) AddAppPassword(username, hash, role string, expire int) (string, error) {
+func (a *MemoryAuthProvide) AddAppPassword(username, password, role string, expire int) (string, error) {
 	if user, ok := a.users[username]; ok {
+
+		hash, err := internal.HashPassword(password)
+		if err != nil {
+			return "", fmt.Errorf("failed to hash password: %v", err)
+		}
+
 		appPassword := providerTypes.AppPassword{
 			ID:        internal.GenerateUniqueID(), // Implement a function to generate unique IDs
 			Hash:      hash,
