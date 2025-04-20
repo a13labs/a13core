@@ -68,9 +68,9 @@ func FromConfig(config json.RawMessage) providerTypes.AuthProvider {
 
 	if c.Port == 0 {
 		c.Port = 389
-	}
-	if c.UseSSL && c.Port == 0 {
-		c.Port = 636
+		if c.UseSSL {
+			c.Port = 636
+		}
 	}
 	if c.Attributes == nil {
 		c.Attributes = []string{"name", "cn", "mail", "uidnumber", "gidnumber", "ou"}
