@@ -5,80 +5,11 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/a13labs/a13core/auth/providers/internal"
 	providerTypes "github.com/a13labs/a13core/auth/providers/types"
 )
-
-type FileAuthProviderConfig struct {
-	FilePath string `json:"file_path"`
-}
-
-type FileAuthProvider struct {
-	providerTypes.AuthProvider
-	userStoreMux sync.Mutex
-	users        providerTypes.Users
-	config       FileAuthProviderConfig
-}
-
-func FromConfig(config json.RawMessage) providerTypes.AuthProvider {
-
-	var c FileAuthProviderConfig
-	if err := json.Unmarshal([]byte(config), &c); err != nil {
-		return nil
-	}
-	return &FileAuthProvider{config: c}
-}
-
-func (a *FileAuthProvider) AuthenticateUser(username, password string) *providerTypes.UserView {
-	err := a.LoadUsers()
-	if err != nil {
-		return nil
-	}
-
-	for _, user := range a.users.Users {
-		if user.Username == username && internal.VerifyPassword(user.Hash, password) {
-			return &providerTypes.UserView{
-				Username: user.Username,
-				Role:     user.Role,
-			}
-		}
-	}
-	return nil
-}
-
-func (a *FileAuthProvider) AuthenticateWithAppPassword(username, password string) *providerTypes.UserView {
-	err := a.LoadUsers()
-	if err != nil {
-		return nil
-	}
-	for _, user := range a.users.Users {
-		if user.Username == username {
-			for _, appPassword := range user.AppPasswords {
-				if internal.VerifyPassword(appPassword.Hash, password) && !appPassword.Revoked {
-					if appPassword.ExpiresAt.IsZero() || time.Now().Before(appPassword.ExpiresAt) {
-						return &providerTypes.UserView{
-							Username: user.Username,
-							Role:     user.Role,
-							AppPasswords: []providerTypes.AppPasswordView{
-								{
-									ID:        appPassword.ID,
-									CreatedAt: appPassword.CreatedAt,
-									ExpiresAt: appPassword.ExpiresAt,
-									Role:      appPassword.Role,
-									Revoked:   appPassword.Revoked,
-								},
-							},
-						}
-					}
-				}
-			}
-		}
-	}
-	return nil
-}
 
 func (a *FileAuthProvider) AddUser(username, password, role string) error {
 	err := a.LoadUsers()

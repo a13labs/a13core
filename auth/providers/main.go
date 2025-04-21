@@ -48,11 +48,7 @@ func FromConfig(provider string, config json.RawMessage) (*AuthLayer, error) {
 }
 
 func (l *AuthLayer) AuthenticateUser(username, password string) *providerTypes.UserView {
-	user := l.authProvider.AuthenticateUser(username, password)
-	if user == nil {
-		return l.authProvider.AuthenticateWithAppPassword(username, password)
-	}
-	return user
+	return l.authProvider.Authenticate(username, password)
 }
 
 func (l *AuthLayer) AddUser(username, password, role string) error {

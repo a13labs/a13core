@@ -40,8 +40,7 @@ type Users struct {
 }
 
 type AuthProvider interface {
-	AuthenticateUser(username, password string) *UserView
-	AuthenticateWithAppPassword(username, password string) *UserView
+	Authenticate(username, password string) *UserView
 }
 
 type UserManagement interface {
