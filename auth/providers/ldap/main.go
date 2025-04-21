@@ -16,10 +16,9 @@ type LDAPAuthConfig struct {
 	BaseDN             string            `json:"base_dn"`
 	BindDN             string            `json:"bind_dn"`
 	BindPassword       string            `json:"bind_password"`
-	GroupFilter        string            `json:"group_filter,omitempty"` // e.g. "(member=%s)"
+	GroupFilter        string            `json:"group_filter,omitempty"`
 	Host               string            `json:"host"`
-	ServerName         string            `json:"server_name,omitempty"`
-	UserFilter         string            `json:"user_filter,omitempty"` // e.g. "(uid=%s)"
+	UserFilter         string            `json:"user_filter,omitempty"`
 	Port               int               `json:"port,omitempty"`
 	InsecureSkipVerify bool              `json:"insecure,omitempty"`
 	UseSSL             bool              `json:"use_ssl,omitempty"`
@@ -109,7 +108,6 @@ func (a *LDAPAuth) dial() (*ldap.Conn, error) {
 	} else {
 		config := &tls.Config{
 			InsecureSkipVerify: a.config.InsecureSkipVerify,
-			ServerName:         a.config.ServerName,
 		}
 		if a.config.ClientCertificates != nil && len(a.config.ClientCertificates) > 0 {
 			config.Certificates = a.config.ClientCertificates
