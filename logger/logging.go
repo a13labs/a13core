@@ -53,3 +53,11 @@ func Debug(args ...interface{}) {
 func Debugf(format string, args ...interface{}) {
 	log.Debugf(format, args...)
 }
+
+func Fatal(args ...interface{}) {
+	log.Fatal(args...)
+}
+
+func Fatalf(format string, args ...interface{}) {
+	log.Fatalf(format, args...)
+}
