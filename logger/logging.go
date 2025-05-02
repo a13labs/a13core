@@ -10,6 +10,27 @@ var log = logrus.New()
 
 type Level uint32
 
+// A constant exposing all logging levels
+var AllLevels = []Level{
+	PanicLevel,
+	FatalLevel,
+	ErrorLevel,
+	WarnLevel,
+	InfoLevel,
+	DebugLevel,
+	TraceLevel,
+}
+
+const (
+	PanicLevel Level = iota
+	FatalLevel       = Level(logrus.FatalLevel)
+	ErrorLevel       = Level(logrus.ErrorLevel)
+	WarnLevel        = Level(logrus.WarnLevel)
+	InfoLevel        = Level(logrus.InfoLevel)
+	DebugLevel       = Level(logrus.DebugLevel)
+	TraceLevel       = Level(logrus.TraceLevel)
+)
+
 func Init(logFile string) {
 	log.SetFormatter(&logrus.TextFormatter{
 		ForceColors:     true,
