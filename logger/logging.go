@@ -8,6 +8,8 @@ import (
 
 var log = logrus.New()
 
+type Level uint32
+
 func Init(logFile string) {
 	log.SetFormatter(&logrus.TextFormatter{
 		ForceColors:     true,
@@ -60,4 +62,16 @@ func Fatal(args ...interface{}) {
 
 func Fatalf(format string, args ...interface{}) {
 	log.Fatalf(format, args...)
+}
+
+func ParseLevel(level string) (Level, error) {
+	l, err := logrus.ParseLevel(level)
+	if err != nil {
+		return 0, err
+	}
+	return Level(l), nil
+}
+
+func SetLevel(level Level) {
+	log.SetLevel(logrus.Level(level))
 }
